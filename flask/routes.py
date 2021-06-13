@@ -1,6 +1,6 @@
 from flask import request, render_template, make_response, jsonify
 from datetime import datetime as dt
-from flask import current_app as app
+from app import app
 from models.cart import Cart
 from models.user import User
 from models.shop import Shop
@@ -15,6 +15,27 @@ from PIL import Image
 from PIL import ImageFilter
 from StringIO import StringIO
 
+import json
+import io
+import random
+import string
+import warnings
+import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import warnings
+from gtts import gTTS
+import os
+warnings.filterwarnings('ignore')
+import speech_recognition as sr 
+import nltk
+from nltk.stem import WordNetLemmatizer
+#for downloading package files can be commented after First run
+nltk.download('popular', quiet=True)
+nltk.download('nps_chat',quiet=True)
+nltk.download('punkt') 
+nltk.download('wordnet')
+
 # You have 50 free calls per day, after that you have to register somewhere
 # around here probably https://cloud.google.com/speech-to-text/
 GOOGLE_SPEECH_API_KEY = 'AIzaSyADxOB7Npq1-Q5cj5A2Zm-oKRIrzjnIbe0'
@@ -22,6 +43,72 @@ GOOGLE_SPEECH_API_KEY = 'AIzaSyADxOB7Npq1-Q5cj5A2Zm-oKRIrzjnIbe0'
 # NanoNets Model Details
 model_id = os.environ.get('NANONETS_MODEL_ID')
 api_key = os.environ.get('NANONETS_API_KEY')
+
+# Keyword Matching
+RESPONSE_INPUTS = ("hello", "hi", "greetings", "sup", "what's up","hey",)
+RESPONSE_RESPONSES = ["hi", "hey", "*nods*", "hi there", "hello", "I am glad! You are talking to me"]
+
+#Reading in the input_corpus
+with open('intro_join','r', encoding='utf8', errors ='ignore') as fin:
+    raw = fin.read().lower()
+
+#TOkenisation
+sent_tokens = nltk.sent_tokenize(raw)# converts to list of sentences 
+word_tokens = nltk.word_tokenize(raw)# converts to list of words
+
+# Preprocessing
+lemmer = WordNetLemmatizer()
+
+def LemTokens(tokens):
+    return [lemmer.lemmatize(token) for token in tokens]
+remove_punct_dict = dict((ord(punct), None) for punct in string.punctuation)
+
+def LemNormalize(text):
+    return LemTokens(nltk.word_tokenize(text.lower().translate(remove_punct_dict)))
+
+def fixResponse(sentence):
+    """If user's input is a fixed response, return a response that is already stored"""
+    for word in sentence.split():
+        if word.lower() in RESPONSE_INPUTS:
+            return random.choice(RESPONSE_RESPONSES)
+
+# Generating response and processing 
+def response(user_response):
+    robo_response=''
+    sent_tokens.append(user_response)
+    TfidfVec = TfidfVectorizer(tokenizer=LemNormalize, stop_words='english')
+    tfidf = TfidfVec.fit_transform(sent_tokens)
+    vals = cosine_similarity(tfidf[-1], tfidf)
+    idx=vals.argsort()[0][-2]
+    flat = vals.flatten()
+    flat.sort()
+    req_tfidf = flat[-2]
+    if(req_tfidf==0):
+        robo_response=robo_response+"I am sorry! I don't understand you"
+        return robo_response
+    else:
+        robo_response = robo_response+sent_tokens[idx]
+        return robo_response
+
+"""
+------
+Build NLP Classifier using NaiveBayesClassifier
+Text with existing Text Corpus.
+------
+"""
+def build_nlp_model():
+    posts = nltk.corpus.nps_chat.xml_posts()[:10000]
+    # To Recognise input type as QUES. 
+    def dialogue_act_features(post):
+        features = {}
+        for word in nltk.word_tokenize(post):
+            features['contains({})'.format(word.lower())] = True
+        return features
+    featuresets = [(dialogue_act_features(post.text), post.get('class')) for post in posts]
+    size = int(len(featuresets) * 0.1)
+    train_set, test_set = featuresets[size:], featuresets[:size]
+    classifier = nltk.NaiveBayesClassifier.train(train_set)
+
 
 """
 -----
@@ -96,9 +183,65 @@ def speech_to_text_en():
             filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
             file.save(filepath)
 
+            # Check which command this is
+            if "coupons" in extra_line:
+                # Get All Coupons
+                print("Retrieve all Coupons")
+
+            elif "view cart" in extra_line:
+                # Retrieve Cart
+                print("Retrieve Users Cart - If Exists")
+
+            elif "find nearest shops" in extra_line:
+                # Retrieve all nearest shops
+                print("Find Nearest Shops based on Latitude and Longitude")
+
+            elif "item" in extra_line:
+                # If the Word Item is in the Audio then retrieve all the items from the database and check if name matches
+                items = Item.query.all()
+                for itm in items:
+                    if (itm.item_code in extra_line):
+                        # Item Code is in the Speech
+                        # Check quantity
+
+                        return jsonify({"result":True,"item":itm})
+
+
             return jsonify({"result":True,"msg":"Successfully Converted Speech to Text","command":extra_line})
     else:
         return jsonify({"result":False,"msg":"Invalid Method"})
+
+"""
+Search Items given the List as a JSON
+- Works for both Voice Search and OCR Search
+- Searches Through the Items List (Assuming One Shop Only) and identifies all the available items along with the percentage available.
+"""
+@app.route('/search', methods=["GET", "POST"])
+def search_items():
+    """Search Text based List against the Database"""
+    extra_line = ''
+    if request.method == "POST":
+        # Read the item list
+        items = json.loads(request.json['items'])
+        items_db = []
+        num_items = 0
+        total_items = len(items)
+
+        for itm in items:
+            # Check Against the Database for Item (One Shop Only for Now)
+            item_db = Item.query().filter_by(item_name = itm['item_name'])
+            items_db.append(item_db)
+        
+        for i in range(0, len(items_db)):
+            if (items_db[i] != None and items[i]['item_qty'] <= items_db[i].item_stock):
+                num_items = num_items + 1
+        
+        percentage = (num_items/total_items)*100
+
+        print("Percentage : " + str(percentage))
+
+        return jsonify({"result":True,"originalItems":items, "foundItems":items_db, "totalItems":total_items, "numItems": num_items, "percentage": percentage})
+
 
 """
 -----

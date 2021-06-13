@@ -1,7 +1,10 @@
 """Data models."""
-from . import db
+import sys
+import os
 import datetime
 from sqlalchemy import Column, Integer, DateTime, ForeignKey, Table
+sys.path.append(os.path.abspath(__file__))
+import db
 
 class Item(db.Model):
     """Data model for carts."""
