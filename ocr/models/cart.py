@@ -2,44 +2,18 @@
 import sys
 import os
 import datetime
-from sqlalchemy import Column, Integer, DateTime, ForeignKey, Table
-sys.path.append(os.path.abspath(__file__))
+from flask_mongoengine import MongoEngine
+sys.path.append("...")
 import db
 
-class Item(db.Model):
+class Item(db.Document):
     """Data model for carts."""
-
-    __tablename__ = 'cart'
-    cart_id = db.Column(
-        db.Integer,
-        primary_key=True
-    )
-
-    shop_id = db.Column(
-        db.Integer,
-        ForeignKey('shop.shop_id'),
-    )
-
-    user_id = db.Column(
-        db.Integer,
-        ForeignKey('user.user_id'),
-    )
-
-    cart_created_on = db.Column(
-        db.DateTime,
-        index=False,
-        unique=False,
-        nullable=False,
-        default=datetime.datetime.utcnow
-    )
-
-    cart_updated_on = db.Column(
-        db.DateTime,
-        index=False,
-        unique=False,
-        nullable=True,
-        default=None
-    )
+    cart_id = db.SequenceField(primary_key=True)
+    shop_id = db.IntField(required=True,default=1)
+    user_id = db.IntField(required=True)
+    coupon_id = db.IntField(default=None)
+    cart_created_on = db.DateTimeField(required=True, default=datetime.datetime.utcnow)
+    cart_updated_on = db.DateTimeField(default=None)
 
     def __repr__(self):
         return '<Cart {}>'.format(self.cart_id)

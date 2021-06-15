@@ -2,12 +2,17 @@ from flask import request, render_template, make_response, jsonify
 from datetime import datetime as dt
 from app import app
 from models.cart import Cart
+from models.cartitem import CartItem
 from models.user import User
 from models.shop import Shop
 from models.coupon import Coupon
 from models.list import List
+from models.listitem import ListItem
+from models.category import Category
 from models.item import Item
-from models.corder import Corder
+from models.order import Order
+from models.orderitem import OrderItem
+from models.usercoupon import UserCoupon
 
 import pytesseract
 import requests, os, sys
@@ -105,6 +110,114 @@ def build_nlp_model():
     train_set, test_set = featuresets[size:], featuresets[:size]
     classifier = nltk.NaiveBayesClassifier.train(train_set)
 
+"""
+User Register - Speech to Text Endpoint
+---------------------------------------
+This Endpoint will get the User's Speech along with a Flag to indicate whether it is one of the following:
+1. User's Full Name
+2. Email
+3. Phone Number
+4. Address
+5. Save => Indicating to Save all the user's details with all of the above along with the Latitude and Longitude
+"""
+@app.route('/register', methods=['POST'])
+def register_user():
+    line = None
+    flag = None
+    if request.method == "POST":
+        flag = request.form["flag"]
+        # Check if the POST Request has the File Part.
+        if "audioFile" not in request.files:
+            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+        
+        file = request.files['audioFile']
+        if file.filename == "":
+            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+
+        if file:
+            # Speech Recognition Stuff.
+            recognizer = sr.Recognizer()
+            audio_file = sr.AudioFile(file)
+            with audio_file as source:
+                audio_data = recognizer.record(source)
+            line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
+
+            if (flag == "name"):
+                # This is the Name of the user
+                return jsonify({"result":True,"msg":"","flag":"register-process","data":line})
+            elif (flag == "email"):
+                # This is the Email of the user
+                return jsonify({"result":True,"msg":"","flag":"register-process","data":line})
+            elif (flag == "phone"):
+                # This is the Phone Number of the user
+                return jsonify({"result":True,"msg":"","flag":"register-process","data":line})
+            elif (flag == "address"):
+                # This is the Address of the user
+                return jsonify({"result":True,"msg":"","flag":"register-process","data":line})
+            elif (flag == "save"):
+                try:
+                    # Save the user in the database
+                    name = request.form["name"]
+                    email = request.form["email"]
+                    phone = request.form["phone"]
+                    address = request.form["address"]
+                    latitude = request.form["latitude"]
+                    longitude = request.form["longitude"]
+
+                    User(name=name, email=email,phone=phone,address=address,latitude=latitude,longitude=longitude).save()
+
+                    return jsonify({"result":True,"msg":"Successfully Registered User","flag":"register-success"})
+                except:
+                    return jsonify({"result":False,"msg":"Failed to Register User","flag":"register-error"})
+            else:
+                return jsonify({"result":False,"msg":"Invalid Flag","flag":"register-error"})
+        else:
+            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+    else:
+        return jsonify({"result":False,"msg":"Invalid Request Method","flag":"register-error"})
+
+"""
+User Login - Speech to Text Endpoint
+---------------------------------------
+This Endpoint will get the User's Speech to log the user into the app:
+The Email is taken as the input and the converted to text. the user details
+are then retrieved from the database and returned.
+"""
+@app.route('/login', methods=['POST'])
+def login_user():
+    line = None
+    flag = None
+    if request.method == "POST":
+        flag = request.form["flag"]
+        # Check if the POST Request has the File Part.
+        if "audioFile" not in request.files:
+            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+        
+        file = request.files['audioFile']
+        if file.filename == "":
+            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+
+        if file:
+            # Speech Recognition Stuff.
+            recognizer = sr.Recognizer()
+            audio_file = sr.AudioFile(file)
+            with audio_file as source:
+                audio_data = recognizer.record(source)
+            line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
+            line=line.replace('at','@')
+            line=line.replace('dot','.')
+            line=line.replace(' ', '')
+
+            loggedin_user = User.objects(email=line).first()
+
+            if (loggedin_user != None):
+                return jsonify({"result":True,"msg":"Successfully Logged In!","flag":"login-success"})
+            else:
+                return jsonify({"result":False,"msg":"Failed to Login!","flag":"login-error"})
+        else:
+            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+    else:
+        return jsonify({"result":False,"msg":"Invalid Request Method","flag":"login-error"})
 
 """
 -----
@@ -196,6 +309,80 @@ def speech_to_text_ta():
             return jsonify({"result":True,"msg":"Successfully Converted Speech to Text","command":extra_line})
     else:
         return jsonify({"result":False,"msg":"Invalid Method"})
+
+"""
+Voice Assistant - EN
+-----
+Retrieve Data based on wht is requested from the Voice Assistant
+"""
+@app.route('/voicebot/en', methods=["POST"])
+def voiceassist_en():
+    if request.method == "POST":
+        # Check if the post request has the file part.
+        if "audioFile" not in request.files:
+            return jsonify({"result":False,"msg":"No Audio Found!"})
+        
+        file = request.files["audioFile"]
+        if file.filename == "":
+            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+        
+        if file:
+            # Speech Recognition Stuff.
+            recognizer = sr.Recognizer()
+            audio_file = sr.AudioFile(file)
+            with audio_file as source:
+                audio_data = recognizer.record(source)
+            line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
+
+            if ("coupon" in line) or ("coupons" in line):
+                # Retrieve All Coupons - Check usercoupon for each coupon to ensure that it is not used
+                user_id=request.form["userId"]
+                coupons = Coupon.objects().to_json()
+                usercoupons = UserCoupon.objects(user_id=user_id).to_json()
+
+                return None
+            elif ("offer" in line) or ("offers" in line):
+                # Retrieve All Offers - Where item_offer_price is not None
+                items = Item.objects.filter(item_offer_price__isnull=False).to_json()
+                shops = Shop.objects().to_json()
+
+                return jsonify({"result":True,"msg":"The following are the items that are on offer in different shops!","flag":"offer-success","items":items,"shops":shops})
+            
+            elif ("order" in line) or ("orders" in line):
+                return jsonify({"result":True,"msg":"Do you want to see Completed Orders, Cancelled Orders or Pending Orders","flag":"order-menu"})
+            
+            elif ("pending" in line) or ("pending orders" in line):
+                # Retrieve Pending orders
+                orders = Order.objects(order_status=0).to_json()
+                return jsonify({"result":True, "msg":"The following are the currently pending orders that you have!","flag":"order-pending","orders":orders})
+            
+            elif ("completed" in line) or ("completed orders" in line):
+                # Retrieve Completed Orders
+                orders = Order.objects(order_status=1).to_json()
+                return jsonify({"result":True, "msg":"The following are the currently completed orders that you have!","flag":"order-completed","orders":orders})
+            
+            elif ("cancelled" in line) or ("cancelled orders" in line):
+                # Retrieve Cancelled Orders
+                orders = Order.objects(order_status=1).to_json()
+                return jsonify({"result":True, "msg":"The following are the currently cancelled orders that you have!","flag":"order-cancelled","orders":orders})
+
+            elif ("cancel order" in line):
+                # Cancel a Specific order assuming the speech is in the format: Cancel Order <ORDERID> - Check if Order is Pending (Not Completed or Already Cancelled). Ask user to give reason.
+                return None
+            elif ("received order" in line):
+                # Received a Specifc order assuming the speech is in the format: Received order <ORDERID> - Check if Order is Pending (Not Completed or Already Cancelled). Ask for review.
+                return None
+            elif ("return order" in line):
+                # Return a Specific Order sssuming the speech is in the format: Return Order <ORDERID> - Check if the Order is Pending (Not Completed or Already Cancelled). Ask for reason.
+                return None
+            elif ("profile" in line):
+                # Get the Profile Details
+                return None
+        else:
+            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+    else:
+        return jsonify({"result":False,"msg":"Invalid Request Method","flag":"assistant-error"})
+    return jsonify({"result":True,"msg":"Successfully Retrieved All"})
 
 """
 ------

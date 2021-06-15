@@ -1,68 +1,22 @@
 """Data models."""
-from . import db
+import sys
+import os
 import datetime
-from sqlalchemy import Column, Integer, DateTime
+from flask_mongoengine import MongoEngine
+sys.path.append("...")
+import db
 
-
-class User(db.Model):
+class User(db.Document):
     """Data model for user accounts."""
-
-    __tablename__ = 'user'
-    user_id = db.Column(
-        db.Integer,
-        primary_key=True
-    )
-
-    user_name = db.Column(
-        db.String(255),
-        index=False,
-        unique=False,
-        nullable=False
-    )
-
-    user_phone = db.Column(
-        db.String(255),
-        index=True,
-        unique=True,
-        nullable=False
-    )
-
-    user_email = db.Column(
-        db.String(80),
-        index=True,
-        unique=True,
-        nullable=False
-    )
-
-    user_password = db.Column(
-        db.String(255),
-        index=False,
-        unique=False,
-        nullable=False,
-    )
-
-    user_address = db.Column(
-        db.Unicode(1000),
-        index=False,
-        unique=False,
-        nullable=False
-    )
-
-    user_created_on = db.Column(
-        db.DateTime,
-        index=False,
-        unique=False,
-        nullable=False,
-        default=datetime.datetime.utcnow
-    )
-
-    user_updated_on = db.Column(
-        db.DateTime,
-        index=False,
-        unique=False,
-        nullable=True,
-        default=None
-    )
+    user_id = db.SequenceField(primary_key=True)
+    user_name = db.StringField(required=True)
+    user_phone = db.StringField(required=True)
+    user_email = db.StringField(required=True)
+    user_address = db.StringField(required=True)
+    user_lat = db.DecimalField(required=True)
+    user_long = db.DecimalField(required=True)
+    user_created_on = db.DateTimeField(default=datetime.datetime.utcnow)
+    user_updated_on = db.DateTimeField(default=None)
 
     def __repr__(self):
         return '<User {}>'.format(self.user_name)

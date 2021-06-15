@@ -9,9 +9,9 @@ import db
 class Item(db.Document):
     """Data model for carts."""
     cart_id = db.SequenceField(primary_key=True)
-    shop_id = db.IntField(required=True)
+    shop_id = db.IntField(required=True,default=1)
     user_id = db.IntField(required=True)
-    coupon_id = db.IntField(required=True)
+    coupon_id = db.IntField(default=None)
     cart_created_on = db.DateTimeField(required=True, default=datetime.datetime.utcnow)
     cart_updated_on = db.DateTimeField(default=None)
 

@@ -12,6 +12,7 @@ from models.category import Category
 from models.item import Item
 from models.order import Order
 from models.orderitem import OrderItem
+from models.usercoupon import UserCoupon
 
 import requests, os, sys
 from PIL import Image
@@ -48,115 +49,6 @@ GOOGLE_SPEECH_API_KEY = 'AIzaSyADxOB7Npq1-Q5cj5A2Zm-oKRIrzjnIbe0'
 # NanoNets Model Details
 model_id = os.environ.get('NANONETS_MODEL_ID')
 api_key = os.environ.get('NANONETS_API_KEY')
-
-"""
-User Register - Speech to Text Endpoint
----------------------------------------
-This Endpoint will get the User's Speech along with a Flag to indicate whether it is one of the following:
-1. User's Full Name
-2. Email
-3. Phone Number
-4. Address
-5. Save => Indicating to Save all the user's details with all of the above along with the Latitude and Longitude
-"""
-@app.route('/register', methods=['POST'])
-def register_user():
-    line = None
-    flag = None
-    if request.method == "POST":
-        flag = request.form["flag"]
-        # Check if the POST Request has the File Part.
-        if "audioFile" not in request.files:
-            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
-        
-        file = request.files['audioFile']
-        if file.filename == "":
-            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
-
-        if file:
-            # Speech Recognition Stuff.
-            recognizer = sr.Recognizer()
-            audio_file = sr.AudioFile(file)
-            with audio_file as source:
-                audio_data = recognizer.record(source)
-            line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
-
-            if (flag == "name"):
-                # This is the Name of the user
-                return jsonify({"result":True,"msg":"","flag":"register-process","data":line})
-            elif (flag == "email"):
-                # This is the Email of the user
-                return jsonify({"result":True,"msg":"","flag":"register-process","data":line})
-            elif (flag == "phone"):
-                # This is the Phone Number of the user
-                return jsonify({"result":True,"msg":"","flag":"register-process","data":line})
-            elif (flag == "address"):
-                # This is the Address of the user
-                return jsonify({"result":True,"msg":"","flag":"register-process","data":line})
-            elif (flag == "save"):
-                try:
-                    # Save the user in the database
-                    name = request.form["name"]
-                    email = request.form["email"]
-                    phone = request.form["phone"]
-                    address = request.form["address"]
-                    latitude = request.form["latitude"]
-                    longitude = request.form["longitude"]
-
-                    User(name=name, email=email,phone=phone,address=address,latitude=latitude,longitude=longitude).save()
-
-                    return jsonify({"result":True,"msg":"Successfully Registered User","flag":"register-success"})
-                except:
-                    return jsonify({"result":False,"msg":"Failed to Register User","flag":"register-error"})
-            else:
-                return jsonify({"result":False,"msg":"Invalid Flag","flag":"register-error"})
-        else:
-            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
-    else:
-        return jsonify({"result":False,"msg":"Invalid Request Method","flag":"register-error"})
-
-"""
-User Login - Speech to Text Endpoint
----------------------------------------
-This Endpoint will get the User's Speech to log the user into the app:
-The Email is taken as the input and the converted to text. the user details
-are then retrieved from the database and returned.
-"""
-@app.route('/login', methods=['POST'])
-def login_user():
-    line = None
-    flag = None
-    if request.method == "POST":
-        flag = request.form["flag"]
-        # Check if the POST Request has the File Part.
-        if "audioFile" not in request.files:
-            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
-        
-        file = request.files['audioFile']
-        if file.filename == "":
-            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
-
-        if file:
-            # Speech Recognition Stuff.
-            recognizer = sr.Recognizer()
-            audio_file = sr.AudioFile(file)
-            with audio_file as source:
-                audio_data = recognizer.record(source)
-            line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
-            line=line.replace('at','@')
-            line=line.replace('dot','.')
-            line=line.replace(' ', '')
-
-            loggedin_user = User.objects(email=line).first()
-
-            if (loggedin_user != None):
-                return jsonify({"result":True,"msg":"Successfully Logged In!","flag":"login-success"})
-            else:
-                return jsonify({"result":False,"msg":"Failed to Login!","flag":"login-error"})
-        else:
-            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
-    else:
-        return jsonify({"result":False,"msg":"Invalid Request Method","flag":"login-error"})
 
 """
 Language Picker - English or Tamil

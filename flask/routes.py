@@ -12,6 +12,7 @@ from models.category import Category
 from models.item import Item
 from models.order import Order
 from models.orderitem import OrderItem
+from models.usercoupon import UserCoupon
 
 import requests, os, sys
 from PIL import Image

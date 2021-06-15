@@ -10,6 +10,7 @@ class Order(db.Document):
     """Data model for Caet orders."""
     order_id = db.SequenceField(primary_key=True, required=True)
     order_status = db.IntField(required=True, default=0) # 0=> Processing, 1 => Completed, 2 => Cancelled
+    order_payment = db.IntField(required=True, default=0) # 0=> COD, 1 => CARD
     order_created_on = db.DateTimeField(default=datetime.datetime.utcnow, required=True)
     order_updated_on = db.DateTimeField(default=None)
 
