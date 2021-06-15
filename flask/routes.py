@@ -413,23 +413,105 @@ def voicesearch_en():
                     # Check if item is already in cart - then edit. Else New Item
                     cart = Cart.objects(user_id=request.form["userId"]).first().to_json()
                     if cart is not None:
+                        
+                        # Cart Already Exists - Check if item is in Cart Alrady
                         cartitem = CartItem(cart_id=cart["cart_id"],item_id=item_jsn["item_id"])
                         if (cartitem is None):
+                            
                             # If Item is not in 
                             if (item_jsn["item_stock"] >= item_qty):
                                 # Stock Available
                                 # Add to Cart and Send Response Back to User
+                                CartItem(cart_id=cart["cart_id"], item_id=item_jsn["item_id"], item_name=item_jsn["item_name"], item_code=item_jsn["item_code"], item_rate=item_jsn["item_rate"], item_offer_price=item_jsn["item_offer_price"], item_qty=item_qty).save() # Save the Item to the Cart
                                 return jsonify({"result":True,"msg":"Item with name " + item_name + " and Quantity " + item_qty + " has been successfully added to your Cart!","flag":"search-success"})
+                            
                             else:
                                 return jsonify({"result":False,"msg":"Item with name " + item_name + " has only " + str(item_jsn["item_stock"]) + " " + item_jsn["item_unit"] + "!","flag":"search-error"})
                         else:
+                            # Item Already in Cart. So Update the Existing
+                            cartitm_item_qty = cartitem.to_json()["item_qty"]
+                            if (item_jsn["item_stock"] >= (cartitm_item_qty + item_qty)):
+                                # Stock Available
+                                cartitem.update(item_qty=(cartitm_item_qty+item_qty))
+                                return jsonify({"result":True,"msg":"Item with name " + item_name + " and Quantity " + item_qty + " has been successfully updated in your Cart! New Quantity is " + str((cartitm_item_qty + item_qty)),"flag":"search-success"})
+                            
+                            else:
+                                # Stock Not Available
+                                return jsonify({"result":False,"msg":"Item with name " + item_name + " has only " + str(item_jsn["item_stock"]) + " " + item_jsn["item_unit"] + "!", "flag":"search-error"})
 
                     else:
-                        return jsonify({"result":False,"msg":"Invalid User ID","flag","search-error"})
+                        
+                        # New Cart - No need to check if Item is in cart already
+                        # Check if Item is in Stock
+                        if (item_jsn["item_stock"] >= item_qty):
+                            
+                            # Sotck Available
+                            # Add Item to Cart and Send Response Back to User
+                            cart = Cart(user_id=request.form["userId"]).save() # Create New Cart and get the Cart Object
+                            CartItem(cart_id=cart.cart_id, item_id=item_jsn["item_id"], item_name=item_jsn["item_name"], item_code=item_jsn["item_code"], item_rate=item_jsn["item_rate"], item_offer_price=item_jsn["item_offer_price"], item_qty=item_qty).save() # Save the Item to the Cart
+
+                            return jsonify({"result":True,"msg":"Item with name " + item_name + " and Quantity " + item_qty + " has been successfully added to your Cart!", "flag":"search-success"})
+                        
+                        else:
+                            return jsonify({"result":False,"msg":"Item with name " + item_name + " has only " + str(item_jsn["item_stock"]) + " " + item_jsn["item_unit"] + "!","flag":"search-error"})
+                
                 else:
                     return jsonify({"result":False, "msg":"Item with name " + item_name + " not found!","flag":"search-error"})
+            elif "save changes" in line:
+                # Save the Cart and Proceed to next screen to confirm
+                # Get the Current Cart of the User. So Expects the userId
+                user_id = request.form["userId"]
+                cart = Cart.objects(user_id=user_id).first()
+                cartitems = CartItem.objects(cart_id=cart.to_json()["cart_id"])
+                items = Item.objects(shop_id=cart.to_json()["shop_id"])
+                
+                return jsonify({"result":True,"msg":"Successfully Saved Cart","flag":"search-save","cart":cart.to_json(),"cartitems":cartitems.to_json(),"items":items.to_json()})
+            elif "alter" in line:
+                # Take the user back to the Edit Screen
+                user_id = request.form["userId"]
+                cart = Cart.objects(user_id=user_id).first()
+                cartitems = CartItem.objects(cart_id=cart.to_json()["cart_id"])
+                items = Item.objects(shop_id=cart.to_json()["shop_id"])
+                
+                return jsonify({"result":True,"msg":"You can now edit the items in your cart","flag":"search-edit","cart":cart.to_json(),"cartitems":cartitems.to_json(),"items":items.to_json()})
+            elif "search" in line:
+                # Search it Against the Availability
+                # not in first 50% - Instead take them to the Place Order Page
+                user_id = request.form["userId"]
+                cart = Cart.objects(user_id=user_id).first()
+                cartitems = CartItem.objects(cart_id=cart.to_json()["cart_id"])
+                items = Item.objects(shop_id=cart.to_json()["shop_id"])
+                
+                return jsonify({"result":True,"msg":"Your Total Bill Amount is <INSERT AMOUNT HERE>. The following are the items in your cart.","flag":"search-edit","cart":cart.to_json(),"cartitems":cartitems.to_json(),"items":items.to_json()})
+            elif "place order" in line:
+                # Get the user's address and total amount to be paid - Total of All Items
+                user_id = request.form["userId"]
+                cart = Cart.objects(user_id=user_id).first().to_json()
+                cartitems = CartItem.objects(cart_id=cart["cart_id"])
+                user = User.objects(user_id=user_id).first().to_json()
+                total=0
+
+                return jsonify({"result":True,"msg":"Your order can now be placed","address":user["user_address"],"total":total,"payment","Cash On Delivery"})
+                # Iterate and tally the total
+            elif "checkout" in line:
+                # Place the Order by Moving the Cart to the Order and CartItem to OrderItem
+                # Empty the Cart
+                user_id = request.form["userId"]
+                cart = Cart.objects(user_id=user_id).first().to_json()
+                cartitems = CartItem.objects(cart_id=cart["cart_id"])
+
+                # Iterate Each item in the Cart and Save it to CarItem
+                order = Order().save().to_json()
+                for item in cartitems:
+                    item = item.to_json()
+                    OrderItem(order_id=order["order_id"],item_id=item["item_id"],item_name=item["item_name"],item_code=item["item_code"],item_rate=item["item_rate"],item_offer_price=item["item_offer_price"],item_qty=item["item_qty"]).save()
+                    
+                # delete all items from the Cart
+                
+                return jsonify({"result":True,"msg":"Your Order has been placed successfully"})
             else:
                 return jsonify({"result":False,"msg":"Invalid Audio Command","flag":"search-error"})
+        
         else:
             return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
     else:
@@ -473,6 +555,71 @@ Retrieve Data based on wht is requested from the Voice Assistant
 """
 @app.route('/voicebot/en', methods=["POST"])
 def voiceassist_en():
+    if request.method == "POST":
+        # Check if the post request has the file part.
+        if "audioFile" not in request.files:
+            return jsonify({"result":False,"msg":"No Audio Found!"})
+        
+        file = request.files["audioFile"]
+        if file.filename == "":
+            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+        
+        if file:
+            # Speech Recognition Stuff.
+            recognizer = sr.Recognizer()
+            audio_file = sr.AudioFile(file)
+            with audio_file as source:
+                audio_data = recognizer.record(source)
+            line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
+
+            if ("coupon" in line) or ("coupons" in line):
+                # Retrieve All Coupons - Check usercoupon for each coupon to ensure that it is not used
+                user_id=request.form["userId"]
+                coupons = Coupon.objects().to_json()
+                usercoupons = UserCoupon.objects(user_id=user_id).to_json()
+
+                return None
+            elif ("offer" in line) or ("offers" in line):
+                # Retrieve All Offers - Where item_offer_price is not None
+                items = Item.objects.filter(item_offer_price__isnull=False).to_json()
+                shops = Shop.objects().to_json()
+
+                return jsonify({"result":True,"msg":"The following are the items that are on offer in different shops!","flag":"offer-success","items":items,"shops":shops})
+            
+            elif ("order" in line) or ("orders" in line):
+                return jsonify({"result":True,"msg":"Do you want to see Completed Orders, Cancelled Orders or Pending Orders","flag":"order-menu"})
+            
+            elif ("pending" in line) or ("pending orders" in line):
+                # Retrieve Pending orders
+                orders = Order.objects(order_status=0).to_json()
+                return jsonify({"result":True, "msg":"The following are the currently pending orders that you have!","flag":"order-pending","orders":orders})
+            
+            elif ("completed" in line) or ("completed orders" in line):
+                # Retrieve Completed Orders
+                orders = Order.objects(order_status=1).to_json()
+                return jsonify({"result":True, "msg":"The following are the currently completed orders that you have!","flag":"order-completed","orders":orders})
+            
+            elif ("cancelled" in line) or ("cancelled orders" in line):
+                # Retrieve Cancelled Orders
+                orders = Order.objects(order_status=1).to_json()
+                return jsonify({"result":True, "msg":"The following are the currently cancelled orders that you have!","flag":"order-cancelled","orders":orders})
+
+            elif ("cancel order" in line):
+                # Cancel a Specific order assuming the speech is in the format: Cancel Order <ORDERID> - Check if Order is Pending (Not Completed or Already Cancelled). Ask user to give reason.
+                return None
+            elif ("received order" in line):
+                # Received a Specifc order assuming the speech is in the format: Received order <ORDERID> - Check if Order is Pending (Not Completed or Already Cancelled). Ask for review.
+                return None
+            elif ("return order" in line):
+                # Return a Specific Order sssuming the speech is in the format: Return Order <ORDERID> - Check if the Order is Pending (Not Completed or Already Cancelled). Ask for reason.
+                return None
+            elif ("profile" in line):
+                # Get the Profile Details
+                return None
+        else:
+            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+    else:
+        return jsonify({"result":False,"msg":"Invalid Request Method","flag":"assistant-error"})
     return jsonify({"result":True,"msg":"Successfully Retrieved All"})
 
 """

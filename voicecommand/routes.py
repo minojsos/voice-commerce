@@ -309,23 +309,105 @@ def voicesearch_en():
                     # Check if item is already in cart - then edit. Else New Item
                     cart = Cart.objects(user_id=request.form["userId"]).first().to_json()
                     if cart is not None:
+                        
+                        # Cart Already Exists - Check if item is in Cart Alrady
                         cartitem = CartItem(cart_id=cart["cart_id"],item_id=item_jsn["item_id"])
                         if (cartitem is None):
+                            
                             # If Item is not in 
                             if (item_jsn["item_stock"] >= item_qty):
                                 # Stock Available
                                 # Add to Cart and Send Response Back to User
+                                CartItem(cart_id=cart["cart_id"], item_id=item_jsn["item_id"], item_name=item_jsn["item_name"], item_code=item_jsn["item_code"], item_rate=item_jsn["item_rate"], item_offer_price=item_jsn["item_offer_price"], item_qty=item_qty).save() # Save the Item to the Cart
                                 return jsonify({"result":True,"msg":"Item with name " + item_name + " and Quantity " + item_qty + " has been successfully added to your Cart!","flag":"search-success"})
+                            
                             else:
                                 return jsonify({"result":False,"msg":"Item with name " + item_name + " has only " + str(item_jsn["item_stock"]) + " " + item_jsn["item_unit"] + "!","flag":"search-error"})
                         else:
+                            # Item Already in Cart. So Update the Existing
+                            cartitm_item_qty = cartitem.to_json()["item_qty"]
+                            if (item_jsn["item_stock"] >= (cartitm_item_qty + item_qty)):
+                                # Stock Available
+                                cartitem.update(item_qty=(cartitm_item_qty+item_qty))
+                                return jsonify({"result":True,"msg":"Item with name " + item_name + " and Quantity " + item_qty + " has been successfully updated in your Cart! New Quantity is " + str((cartitm_item_qty + item_qty)),"flag":"search-success"})
+                            
+                            else:
+                                # Stock Not Available
+                                return jsonify({"result":False,"msg":"Item with name " + item_name + " has only " + str(item_jsn["item_stock"]) + " " + item_jsn["item_unit"] + "!", "flag":"search-error"})
 
                     else:
-                        return jsonify({"result":False,"msg":"Invalid User ID","flag","search-error"})
+                        
+                        # New Cart - No need to check if Item is in cart already
+                        # Check if Item is in Stock
+                        if (item_jsn["item_stock"] >= item_qty):
+                            
+                            # Sotck Available
+                            # Add Item to Cart and Send Response Back to User
+                            cart = Cart(user_id=request.form["userId"]).save() # Create New Cart and get the Cart Object
+                            CartItem(cart_id=cart.cart_id, item_id=item_jsn["item_id"], item_name=item_jsn["item_name"], item_code=item_jsn["item_code"], item_rate=item_jsn["item_rate"], item_offer_price=item_jsn["item_offer_price"], item_qty=item_qty).save() # Save the Item to the Cart
+
+                            return jsonify({"result":True,"msg":"Item with name " + item_name + " and Quantity " + item_qty + " has been successfully added to your Cart!", "flag":"search-success"})
+                        
+                        else:
+                            return jsonify({"result":False,"msg":"Item with name " + item_name + " has only " + str(item_jsn["item_stock"]) + " " + item_jsn["item_unit"] + "!","flag":"search-error"})
+                
                 else:
                     return jsonify({"result":False, "msg":"Item with name " + item_name + " not found!","flag":"search-error"})
+            elif "save changes" in line:
+                # Save the Cart and Proceed to next screen to confirm
+                # Get the Current Cart of the User. So Expects the userId
+                user_id = request.form["userId"]
+                cart = Cart.objects(user_id=user_id).first()
+                cartitems = CartItem.objects(cart_id=cart.to_json()["cart_id"])
+                items = Item.objects(shop_id=cart.to_json()["shop_id"])
+                
+                return jsonify({"result":True,"msg":"Successfully Saved Cart","flag":"search-save","cart":cart.to_json(),"cartitems":cartitems.to_json(),"items":items.to_json()})
+            elif "alter" in line:
+                # Take the user back to the Edit Screen
+                user_id = request.form["userId"]
+                cart = Cart.objects(user_id=user_id).first()
+                cartitems = CartItem.objects(cart_id=cart.to_json()["cart_id"])
+                items = Item.objects(shop_id=cart.to_json()["shop_id"])
+                
+                return jsonify({"result":True,"msg":"You can now edit the items in your cart","flag":"search-edit","cart":cart.to_json(),"cartitems":cartitems.to_json(),"items":items.to_json()})
+            elif "search" in line:
+                # Search it Against the Availability
+                # not in first 50% - Instead take them to the Place Order Page
+                user_id = request.form["userId"]
+                cart = Cart.objects(user_id=user_id).first()
+                cartitems = CartItem.objects(cart_id=cart.to_json()["cart_id"])
+                items = Item.objects(shop_id=cart.to_json()["shop_id"])
+                
+                return jsonify({"result":True,"msg":"Your Total Bill Amount is <INSERT AMOUNT HERE>. The following are the items in your cart.","flag":"search-edit","cart":cart.to_json(),"cartitems":cartitems.to_json(),"items":items.to_json()})
+            elif "place order" in line:
+                # Get the user's address and total amount to be paid - Total of All Items
+                user_id = request.form["userId"]
+                cart = Cart.objects(user_id=user_id).first().to_json()
+                cartitems = CartItem.objects(cart_id=cart["cart_id"])
+                user = User.objects(user_id=user_id).first().to_json()
+                total=0
+
+                return jsonify({"result":True,"msg":"Your order can now be placed","address":user["user_address"],"total":total,"payment","Cash On Delivery"})
+                # Iterate and tally the total
+            elif "checkout" in line:
+                # Place the Order by Moving the Cart to the Order and CartItem to OrderItem
+                # Empty the Cart
+                user_id = request.form["userId"]
+                cart = Cart.objects(user_id=user_id).first().to_json()
+                cartitems = CartItem.objects(cart_id=cart["cart_id"])
+
+                # Iterate Each item in the Cart and Save it to CarItem
+                order = Order().save().to_json()
+                for item in cartitems:
+                    item = item.to_json()
+                    OrderItem(order_id=order["order_id"],item_id=item["item_id"],item_name=item["item_name"],item_code=item["item_code"],item_rate=item["item_rate"],item_offer_price=item["item_offer_price"],item_qty=item["item_qty"]).save()
+                    
+                # delete all items from the Cart
+                
+                return jsonify({"result":True,"msg":"Your Order has been placed successfully"})
             else:
                 return jsonify({"result":False,"msg":"Invalid Audio Command","flag":"search-error"})
+        
         else:
             return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
     else:
