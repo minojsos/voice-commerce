@@ -1,20 +1,19 @@
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
+from flask_mongoengine import MongoEngine
 
 app = Flask(__name__)
 
-# Set up the SQLAlchemy Database to be a local file 'desserts.db'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///desserts.db'
-db = SQLAlchemy(app)
+app.config['MONGODB_SETTINGS'] = {
+    'db': 'your_database',
+    'host': 'localhost',
+    'port': 27017
+}
+db = MongoEngine()
+db.init_app(app)
 
+class User(db.Document):
+    name = db.StringField()
+    email = db.StringField()
 
 if __name__ == "__main__":
-
-    # We need to make sure Flask knows about its views before we run
-    # the app, so we import them. We could do it earlier, but there's
-    # a risk that we may run into circular dependencies, so we do it at the
-    # last minute here.
-
-    from routes import *
-
     app.run(debug=True)

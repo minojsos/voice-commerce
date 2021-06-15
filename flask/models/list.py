@@ -1,11 +1,18 @@
 """Data models."""
-from . import db
+import sys
+import os
 import datetime
-from sqlalchemy import Column, Integer, DateTime, ForeignKey, Table
+from flask_mongoengine import MongoEngine
+sys.path.append("...")
+import db
 
-class List(db.Model):
+class List(db.Document):
     """Data model for Grocery Item List of a User."""
-
+    list_id = db.SequenceField(primary_key=True)
+    user_id = db.IntField(required=True)
+    item_created_on = db.DateTimeField(default=datetime.datetime.utcnow, required=True)
+    item_updated_on = db.DateTimeField(default=None)
+    
     __tablename__ = 'list'
     list_id = db.Column(
         db.Integer,
@@ -31,22 +38,6 @@ class List(db.Model):
         index=False,
         unique=False,
         nullable=False
-    )
-
-    item_created_on = db.Column(
-        db.DateTime,
-        index=False,
-        unique=False,
-        nullable=False,
-        default=datetime.datetime.utcnow
-    )
-
-    item_updated_on = db.Column(
-        db.DateTime,
-        index=False,
-        unique=False,
-        nullable=True,
-        default=None
     )
 
     def __repr__(self):
