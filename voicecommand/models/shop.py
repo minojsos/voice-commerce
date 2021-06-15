@@ -1,10 +1,12 @@
 """Data models."""
-from . import db
+import sys
+import os
 import datetime
-from sqlalchemy import Column, Integer, DateTime
+from flask_mongoengine import MongoEngine
+sys.path.append("...")
+import db
 
-
-class Shop(db.Model):
+class Shop(db.Document):
     """Data model for shops."""
 
     __tablename__ = 'shop'
