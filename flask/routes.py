@@ -582,7 +582,7 @@ def voiceassist_en():
     if request.method == "POST":
         # Check if the post request has the file part.
         if "audioFile" not in request.files:
-            return jsonify({"result":False,"msg":"No Audio Found!"})
+            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
         
         file = request.files["audioFile"]
         if file.filename == "":
@@ -603,7 +603,7 @@ def voiceassist_en():
                 coupons = Coupon.objects().to_json()
                 usercoupons = UserCoupon.objects(user_id=user_id).to_json()
 
-                return None
+                return jsonify({"result":True,"msg":"The following are the available coupons","flag":"coupon-success"})
             elif ("offer" in line) or ("offers" in line):
                 # Retrieve All Offers - Where item_offer_price is not None
                 items = Item.objects.filter(item_offer_price__isnull=False).to_json()
