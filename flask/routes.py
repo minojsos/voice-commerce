@@ -29,8 +29,10 @@ from nltk.stem import WordNetLemmatizer
 app = Flask(__name__)
 
 app.config['MONGODB_SETTINGS'] = {
-    'db': 'your_database',
-    'host': 'localhost',
+    'db': 'root',
+    'host': 'cluster0.vxgus.mongodb.net',
+    'username': 'root',
+    'password': 'root',
     'port': 27017
 }
 
@@ -180,7 +182,7 @@ def register_user():
             with audio_file as source:
                 audio_data = recognizer.record(source)
             
-            print(recognizer.recognize_sphinx(audio_data, language="en-US"))
+            line = recognizer.recognize_sphinx(audio_data, language="en-US")
 
             # line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
 
@@ -246,7 +248,8 @@ def login_user():
             audio_file = sr.AudioFile(file)
             with audio_file as source:
                 audio_data = recognizer.record(source)
-            line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
+            # line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
+            line = recognizer.recognize_sphinx(audio_data, language="en-US")
             line=line.replace('at','@')
             line=line.replace('dot','.')
             line=line.replace(' ', '')
@@ -284,7 +287,8 @@ def language_picker():
             audio_file = sr.AudioFile(file)
             with audio_file as source:
                 audio_data = recognizer.record(source)
-            line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
+            # line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
+            line = recognizer.recognize_sphinx(audio_data, language="en-US")
 
             if ("english" in line) and ("tamil" not in line):
                 return jsonify({"result":False,"msg":"You have Chosen English","flag":"language-success","language":"english"})
@@ -324,7 +328,8 @@ def navigation_en():
             audio_file = sr.AudioFile(file)
             with audio_file as source:
                 audio_data = recognizer.record(source)
-            line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
+            # line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
+            line = recognizer.recognize_sphinx(audio_data, language="en-US")
 
             if "voice search" in line:
                 return jsonify({"result":True,"msg":"You have chosen Voice Search!","flag":"voice-search"})
@@ -399,7 +404,8 @@ def voicesearch_en():
             audio_file = sr.AudioFile(file)
             with audio_file as source:
                 audio_data = recognizer.record(source)
-            line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
+            # line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
+            line = recognizer.recognize_sphinx(audio_data, language="en-US")
 
             # We Search Based on the Item Name in the Audio - Expected Audio Format: Item [Item Name] [Qty] [Unit] - Item Rice 2KG
             if "item" in line:
@@ -576,7 +582,8 @@ def voiceassist_en():
             audio_file = sr.AudioFile(file)
             with audio_file as source:
                 audio_data = recognizer.record(source)
-            line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
+            # line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
+            line = recognizer.recognize_sphinx(audio_data, language="en-US")
 
             if ("coupon" in line) or ("coupons" in line):
                 # Retrieve All Coupons - Check usercoupon for each coupon to ensure that it is not used
@@ -664,10 +671,8 @@ def speech_to_text_en():
             audio_file = sr.AudioFile(file)
             with audio_file as source:
                 audio_data = recognizer.record(source)
-            text = recognizer.recognize_google(
-                audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US"
-            )
-            extra_line = text # Save the Txt in Extra Line
+            # extra_line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
+            extra_line = recognizer.recognize_sphinx(audio_data, language="en-US")
 
             # Saving the file.
             filename = secure_filename(file.filename)
