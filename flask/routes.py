@@ -7,6 +7,19 @@ from flask import request, make_response, jsonify
 from flask_cors import CORS, cross_origin
 from datetime import datetime as dt
 
+from models.cart import Cart
+from models.cartitem import CartItem
+from models.user import User
+from models.shop import Shop
+from models.coupon import Coupon
+from models.list import List
+from models.listitem import ListItem
+from models.category import Category
+from models.item import Item
+from models.order import Order
+from models.orderitem import OrderItem
+from models.usercoupon import UserCoupon
+
 import requests, os, sys
 import json
 import io
@@ -28,18 +41,15 @@ from nltk.stem import WordNetLemmatizer
 
 app = Flask(__name__)
 
-app.config['MONGODB_SETTINGS'] = {
-    'db': 'root',
-    'host': 'cluster0.vxgus.mongodb.net',
-    'username': 'root',
-    'password': 'root',
-    'port': 27017
-}
+# app.config['MONGODB_SETTINGS'] = {
+#     'db': 'root',
+#     'host': 'cluster0.vxgus.mongodb.net',
+#     'username': 'root',
+#     'password': 'root',
+#     'port': 27017
+# }
 
 CORS(app)
-
-db = MongoEngine()
-db.init_app(app)
 
 if __name__ == "__main__":
     app.run(debug=True, threaded=True)

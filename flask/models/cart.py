@@ -4,10 +4,7 @@ import os
 import datetime
 from flask_mongoengine import MongoEngine
 sys.path.append("...")
-from routes import *
-# from flask_mongoengine import MongoEngine
-
-# db = MongoEngine()
+from db import *
 
 class Cart(db.Document):
     """Data model for carts."""

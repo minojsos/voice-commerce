@@ -4,7 +4,7 @@ import os
 import datetime
 from flask_mongoengine import MongoEngine
 sys.path.append("...")
-from routes import *
+from db import *
 
 class Order(db.Document):
     """Data model for Caet orders."""
