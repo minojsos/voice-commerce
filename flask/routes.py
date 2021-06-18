@@ -196,19 +196,19 @@ def register_user():
 
             # line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
 
-            if (flag == "name"):
+            if (flag.lower() == "name"):
                 # This is the Name of the user
                 return jsonify({"result":True,"msg":"","flag":"register-process","data":line})
-            elif (flag == "email"):
+            elif (flag.lower() == "email"):
                 # This is the Email of the user
                 return jsonify({"result":True,"msg":"","flag":"register-process","data":line})
-            elif (flag == "phone"):
+            elif (flag.lower() == "phone"):
                 # This is the Phone Number of the user
                 return jsonify({"result":True,"msg":"","flag":"register-process","data":line})
-            elif (flag == "address"):
+            elif (flag.lower() == "address"):
                 # This is the Address of the user
                 return jsonify({"result":True,"msg":"","flag":"register-process","data":line})
-            elif (flag == "save"):
+            elif (flag.lower() == "save"):
                 try:
                     # Save the user in the database
                     name = request.form["name"]
@@ -351,6 +351,8 @@ def navigation_en():
                 return jsonify({"result":True,"msg":"You have chosen to Manage your Profile!","flag":"profile"})
             elif "orders" in line:
                 return jsonify({"result":True,"msg":"You have chosen to View your Orders!","flag":"order"})
+            elif "assistant" in line:
+                return jsonify({"result":True,"msg":"You have chosen to use our Light Now Assistant","flag":"assistant"})
             else:
                 return jsonify({"result":True,"msg":"The menu item you picked is invalid!","flag":"navigation-error"})
         else:
