@@ -1,24 +1,13 @@
+from flask import Flask
 from flask import request, make_response, jsonify
+from flask_mongoengine import MongoEngine
+from flask_cors import CORS, cross_origin
+
+from flask import request, make_response, jsonify
+from flask_cors import CORS, cross_origin
 from datetime import datetime as dt
-from app import app
-from models.cart import Cart
-from models.cartitem import CartItem
-from models.user import User
-from models.shop import Shop
-from models.coupon import Coupon
-from models.list import List
-from models.listitem import ListItem
-from models.category import Category
-from models.item import Item
-from models.order import Order
-from models.orderitem import OrderItem
-from models.usercoupon import UserCoupon
 
 import requests, os, sys
-from PIL import Image
-from PIL import ImageFilter
-from StringIO import StringIO
-
 import json
 import io
 import random
@@ -28,7 +17,7 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import warnings
-from gtts import gTTS
+# from gtts import gTTS
 import os
 warnings.filterwarnings('ignore')
 
@@ -36,6 +25,23 @@ import speech_recognition as sr
 
 import nltk
 from nltk.stem import WordNetLemmatizer
+
+app = Flask(__name__)
+
+app.config['MONGODB_SETTINGS'] = {
+    'db': 'your_database',
+    'host': 'localhost',
+    'port': 27017
+}
+
+CORS(app)
+
+db = MongoEngine()
+db.init_app(app)
+
+if __name__ == "__main__":
+    app.run(debug=True, threaded=True)
+
 #for downloading package files can be commented after First run
 nltk.download('popular', quiet=True)
 nltk.download('nps_chat',quiet=True)
@@ -53,17 +59,6 @@ api_key = os.environ.get('NANONETS_API_KEY')
 # Keyword Matching
 RESPONSE_INPUTS = ("hello", "hi", "greetings", "sup", "what's up","hey",)
 RESPONSE_RESPONSES = ["hi", "hey", "*nods*", "hi there", "hello", "I am glad! You are talking to me"]
-
-#Reading in the input_corpus
-with open('intro_join','r', encoding='utf8', errors ='ignore') as fin:
-    raw = fin.read().lower()
-
-#TOkenisation
-sent_tokens = nltk.sent_tokenize(raw)# converts to list of sentences 
-word_tokens = nltk.word_tokenize(raw)# converts to list of words
-
-# Preprocessing
-lemmer = WordNetLemmatizer()
 
 def LemTokens(tokens):
     return [lemmer.lemmatize(token) for token in tokens]
@@ -123,12 +118,9 @@ OCR
 Convert an Image to text that we need to show in the UI
 """
 @app.route('/predict', methods=['GET'])
+@cross_origin(origin='*')
 def predict_ocr():
     """Generate Text which is in the image"""
-    # image_url = request.args.post('image_url')
-    # image = _get_image(image_url)
-    # image.filter(ImageFilter.SHARPEN)
-    # return pytesseract.image_to_string(image)
     if request.method == "POST":
         if "listFile" not in request.files:
             return jsonify({"result":False,"msg":"No List File Found"})
@@ -154,6 +146,8 @@ def predict_ocr():
     else:
         return jsonify({"result":False,"msg":"Invalid Method"})
 
+
+
 """
 User Register - Speech to Text Endpoint
 ---------------------------------------
@@ -165,6 +159,7 @@ This Endpoint will get the User's Speech along with a Flag to indicate whether i
 5. Save => Indicating to Save all the user's details with all of the above along with the Latitude and Longitude
 """
 @app.route('/register', methods=['POST'])
+@cross_origin(origin='*')
 def register_user():
     line = None
     flag = None
@@ -184,7 +179,10 @@ def register_user():
             audio_file = sr.AudioFile(file)
             with audio_file as source:
                 audio_data = recognizer.record(source)
-            line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
+            
+            print(recognizer.recognize_sphinx(audio_data, language="en-US"))
+
+            # line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
 
             if (flag == "name"):
                 # This is the Name of the user
@@ -228,6 +226,7 @@ The Email is taken as the input and the converted to text. the user details
 are then retrieved from the database and returned.
 """
 @app.route('/login', methods=['POST'])
+@cross_origin(origin='*')
 def login_user():
     line = None
     flag = None
@@ -267,6 +266,7 @@ def login_user():
 Language Picker - English or Tamil
 """
 @app.route('/language', methods=["POST"])
+@cross_origin(origin='*')
 def language_picker():
     """Convert Speech to Text"""
     if request.method == "POST":
@@ -306,6 +306,7 @@ Navigation - English
 Convert Speech to Text using Google Speech to Text and Check what the Chosen Menu Item is.
 """
 @app.route('/navigation/en', methods=["POST"])
+@cross_origin(origin='*')
 def navigation_en():
     """Convert Speech to Text"""
     if request.method == "POST":
@@ -348,6 +349,7 @@ Navigation - Tamil
 Convert Speech to Text using Google Speech to Text and Check what the Chosen Menu Item is.
 """
 @app.route('/navigation/ta', methods=["POST"])
+@cross_origin(origin='*')
 def navigation_ta():
     """Convert Speech to Text"""
     if request.method == "POST":
@@ -379,6 +381,7 @@ Voice Search - Create List (EN)
 This Endpoint allows to Search for Each item and Allow User to Pick the Item they Want to Add to their Cart.
 """
 @app.route('/voicesearch/en', methods=["GET","POST"])
+@cross_origin(origin='*')
 def voicesearch_en():
     """ Convert Speeech to Text"""
     if request.method == "POST":
@@ -492,7 +495,7 @@ def voicesearch_en():
                 user = User.objects(user_id=user_id).first().to_json()
                 total=0
 
-                return jsonify({"result":True,"msg":"Your order can now be placed","address":user["user_address"],"total":total,"payment","Cash On Delivery"})
+                return jsonify({"result":True,"msg":"Your order can now be placed","address":user["user_address"],"total":total,"payment":"Cash On Delivery"})
                 # Iterate and tally the total
             elif "checkout" in line:
                 # Place the Order by Moving the Cart to the Order and CartItem to OrderItem
@@ -524,6 +527,7 @@ Voice Search - Create List (LK)
 This Endpoint allows to Search for Each item and Allow User to Pick the Item they Want to Add to their Cart.
 """
 @app.route('/voicesearch/ta', methods=["POST"])
+@cross_origin(origin='*')
 def voicesearch_ta():
     """ Convert Speeech to Text"""
     if request.method == "POST":
@@ -555,6 +559,7 @@ Voice Assistant - EN
 Retrieve Data based on wht is requested from the Voice Assistant
 """
 @app.route('/voicebot/en', methods=["POST"])
+@cross_origin(origin='*')
 def voiceassist_en():
     if request.method == "POST":
         # Check if the post request has the file part.
@@ -629,6 +634,7 @@ Voice Assistant - TA
 Retrieve Data based on wht is requested from the Voice Assistant
 """
 @app.route('/voicebot/en', methods=["POST"])
+@cross_origin(origin='*')
 def voiceassist_ta():
     return jsonify({"result":True,"msg":"Successfully Retrieved All"})
 
@@ -639,6 +645,7 @@ Speech to Text - English
 Convert Speech to Text using Google Speech to Text
 """
 @app.route('/speech/en', methods=["GET", "POST"])
+@cross_origin(origin='*')
 def speech_to_text_en():
     """Convert Speech to Text"""
     extra_line = ''
@@ -670,7 +677,7 @@ def speech_to_text_en():
             # Check what the command is
             if "create" in extra_line and "list" in extra_line:
                 return jsonify({"result":True,"msg":"You can now create a list!","flag":"create-list"})
-            elif ""
+            
             # Check which command this is
             if "coupons" in extra_line:
                 # Get All Coupons
@@ -705,6 +712,7 @@ Search Items given the List as a JSON
 - Searches Through the Items List (Assuming One Shop Only) and identifies all the available items along with the percentage available.
 """
 @app.route('/search', methods=["GET", "POST"])
+@cross_origin(origin='*')
 def search_items():
     """Search Text based List against the Database"""
     extra_line = ''
@@ -738,6 +746,7 @@ Speech to Text - Tamil
 Convert Speech to Text using Google Speech to Text
 """
 @app.route('/speech/ta', methods=["GET", "POST"])
+@cross_origin(origin='*')
 def speech_to_text_ta():
     """Convert Speech to Text"""
     extra_line = ''
@@ -776,20 +785,23 @@ SHOP
 ------
 """
 @app.route('/shops', methods=['GET'])
+@cross_origin(origin='*')
 def get_all_shops():
     """Retrieve all shops from our database."""
-    shops = Shop.query.all()
+    shops = Shop.objects().to_json()
 
-    return jsonify({"result":True,"msg":"Successfully Retrieved All Shops","data":shops})
+    return jsonify({"result":True,"msg":"Found the following shops","data":shops})
 
 @app.route('/shop/<int:shop_id>', methods=['GET'])
+@cross_origin(origin='*')
 def get_shop(shop_id):
     """Retrieve the Shop with the Given Shop ID"""
-    shop = Shop.query.get_or_404(shop_id)
+    shop = Shop.objects(shop_id=shop_id).first().to_json()
     
-    return jsonify({"result":True,"msg":"Successfully Retrieved Shop with Given ID","data":shop})
+    return jsonify({"result":True,"msg":"Found the shop you were looking for","data":shop})
 
 @app.route('/shop', methods=['POST'])
+@cross_origin(origin='*')
 def new_shop():
     """ Add New Shop to our Database."""
     shop_name = request.args.post('shop_name')
@@ -801,18 +813,15 @@ def new_shop():
     shop_available = request.args.post('shop_available')
 
     """Create a user via query string parameters."""
-    new_shop = Shop(shop_name=shop_name, shop_phone=shop_phone, shop_address=shop_addr, shop_email=shop_email, shop_lat=shop_lat, shop_long=shop_long, shop_available=shop_available)
-    db.session.add(new_shop)  # Adds new Shop record to database
-    db.session.commit()  # Commits all changes
-
+    new_shop = Shop(shop_name=shop_name, shop_phone=shop_phone, shop_address=shop_addr, shop_email=shop_email, shop_lat=shop_lat, shop_long=shop_long, shop_available=shop_available).save()
     return jsonify({"result":True,"msg":"Successfully Created New Shop"})
 
 @app.route('/shop/<int:shop_id>',methods=['DELETE'])
+@cross_origin(origin='*')
 def delete_shop(shop_id):
     """Delete a Shop given the ID of the Shop"""
-    shop = Shop.query.get_or_404(shop_id)
-    db.session.delete(shop)
-    db.session.commit()
+    shop = Shop.objects(shop_id=shop_id).first()
+    shop.delete()
 
     return jsonify({"result":True,"msg":"Successfully Deleted Shop with the Given ID"})
 
@@ -822,18 +831,21 @@ USER
 ------
 """
 @app.route('/users', methods=['GET'])
+@cross_origin(origin='*')
 def get_all_users():
     """Retrieve all Users from our database."""
-    users = User.query.all()
+    users = User.objects().to_json()
     return jsonify({"result":True,"msg":"Successfully Retrieved All Users","data":users})
 
 @app.route('/user/<int:user_id>', methods=['GET'])
+@cross_origin(origin='*')
 def get_user(user_id):
     """Retrieve the User with the Given User ID"""
-    user = User.query.get_or_404(user_id)
+    user = User.objects(user_id=user_id).first().to_json()
     return jsonify({"result":True,"msg":"Successfully Retrieved User with Given ID","data":user})
 
 @app.route('/user', methods=['POST'])
+@cross_origin(origin='*')
 def new_user():
     """ Add New User to our Database."""
     user_name = request.args.post('user_name')
@@ -843,17 +855,16 @@ def new_user():
     user_address = request.args.post('user_address')
 
     """Create a user via query string parameters."""
-    new_user = User(user_name=user_name, user_phone=user_phone, user_email=user_email, user_password=user_password, user_address=user_address)
-    db.session.add(new_user)
-    db.session.commit()
+    new_user = User(user_name=user_name, user_phone=user_phone, user_email=user_email, user_password=user_password, user_address=user_address).save()
     return jsonify({"result":True,"msg":"Successfully Created New User"})
 
 @app.route('/user/<int:user_id>', methods=['DELETE'])
+@cross_origin(origin='*')
 def delete_user(user_id):
     """Delete a User given the ID of the User"""
-    user = User.query.get_or_404(user_id)
-    db.session.delete(user)
-    db.session.commit()
+    user = User.objects(user_id=user_id).first()
+    user.delete()
+
     return jsonify({"result":True,"msg":"Successfully Deleted User with the Given ID"})
 
 """
@@ -864,13 +875,13 @@ COUPON
 @app.route('/coupons', methods=['GET'])
 def get_all_coupons():
     """Retrieve all Coupons from our database."""
-    coupons = Coupon.query.all()
+    coupons = Coupon.objects().to_json()
     return jsonify({"result":True,"msg":"Successfully Retrieved All Coupons","data":coupons})
 
 @app.route('/coupon/<int:coupon_id>',methods=['GET'])
 def get_coupon(coupon_id):
     """Retrieve a Coupon given the ID of the Coupon"""
-    coupon = Coupon.query.get_or_404(coupon_id)
+    coupon = Coupon.objects(coupon_id=coupon_id).first().to_json()
     return jsonify({"result":True,"msg":"Successfully Retrieved Coupon with Given ID","data":coupon})
 
 @app.route('/coupon',methods=['POST'])
@@ -879,17 +890,14 @@ def new_coupon():
     shop_id = request.args.post('shop_id')
     coupon_value = request.args.post('coupon_value')
 
-    new_coupon = Coupon(shop_id=shop_id, coupon_value=coupon_value)
-    db.session.add(new_coupon)
-    db.session.commit()
+    new_coupon = Coupon(shop_id=shop_id, coupon_value=coupon_value).save()
     return jsonify({"result":True,"msg":"Successfully Created New Coupon"})
 
 @app.route('/coupon/<int:coupon_id>', methods=['DELETE'])
 def delete_coupon(coupon_id):
     """Delete a Coupon given the ID of the Coupon"""
-    coupon = Coupon.query.get_or_404(coupon_id)
-    db.session.delete(coupon)
-    db.session.commit()
+    coupon = Coupon.objects(coupon_id=coupon_id).first().to_json()
+    coupon.delete()
     return jsonify({"result":True,"msg":"Successfully Deleted Coupon with the Given ID"})
 
 """
@@ -900,13 +908,13 @@ ITEM
 @app.route('/items', methods=['GET'])
 def get_all_items():
     """Retrieve all items from our database."""
-    items = Item.query.all()
+    items = Item.objects().to_json()
     return jsonify({"result":True,"msg":"Successfully Retrieved All Items","data":items})
 
 @app.route('/item/<int:item_id>', methods=['GET'])
 def get_item(item_id):
     """Retrieve an item given the ID of the Item"""
-    item = Item.query.get_or_404(item_id)
+    item = Item.objects(item_id=item_id).to_json()
     return jsonify({"result":True,"msg":"Successfully Retrieved Item with Given ID","data":item})
 
 @app.route('/item', methods=['POST'])
@@ -919,18 +927,71 @@ def new_item():
     item_rate = request.args.post('item_rate')
     item_unit = request.args.post('item_unit')
 
-    new_item = Item(item_code=item_code, shop_id=shop_id, item_name=item_name, item_stock=item_stock, item_rate=item_rate, item_unit=item_unit)
-    db.session.add(new_item)
-    db.session.commit()
+    new_item = Item(item_code=item_code, shop_id=shop_id, item_name=item_name, item_stock=item_stock, item_rate=item_rate, item_unit=item_unit).save()
     return jsonify({"result":True,"msg":"Successfully Created New Item"})
 
 @app.route('/item/<int:item_id>', methods=['DELETE'])
 def delete_item(item_id):
     """Delete an item given the ID of the Item"""
-    item = Item.query.get_or_404(item_id)
-    db.session.delete(item)
-    db.session.commit()
+    item = Item.query.get_or_404(item_id).first()
+    item.delete()
     return jsonify({"result":True,"msg":"Successfully Deleted Item with the Given ID"})
+
+"""
+----------
+CATEGORY
+----------
+"""
+@app.route('/categories',methods=['GET'])
+def get_all_categories():
+    """Retrieve all Categories from our database."""
+    categories = Category.objects().to_json()
+    return jsonify({"result":True,"msg":"Successfully Retrieved All Categories","data":categories})
+
+@app.route('/category/<int:category_id>', methods=['GET'])
+def get_category(category_id):
+    """Retrieve a Category given the ID of the Category"""
+    category = Category.objects().first().to_json()
+    return jsonify({"result":True,"msg":"Successfully Retrieved Item with Given ID","data":category})
+
+@app.route('/category',methods=['POST'])
+def new_category():
+    """ Add New Category to Our Database."""
+    category_name = request.args.post('category_name')
+
+    new_category = Category(category_name=category_name).save()
+    return jsonify({"result":True,"msg":"Successfully Created New Category"})
+
+@app.route('/category/<int:category_id>', methods=['DELETE'])
+def delete_category(category_id):
+    """Delete a Category given the ID of the Category"""
+    category = Category.objects(category_id=category_id).first()
+    category.delete()
+    return jsonify({"result":True,"msg":"Successfully Deleted Category with the given ID"})
+
+"""
+------
+ORDER
+------
+"""
+@app.route('/orders',methods=['GET'])
+def get_all_orders():
+    """Retrieve all Orders"""
+    orders = Order.objects().to_json()
+    return jsonify({"result":True,"msg":"Successfully Retrieved All Orders","data":orders})
+
+@app.route('/order/<int:order_id>',methods=['GET'])
+def get_order(order_id):
+    """Retrieve a Order given the ID of the Order"""
+    order = Order.objects().first().to_json()
+    return jsonify({"result":True,"msg":"Successfully Retrieved Order with Given ID","data":order})
+
+@app.route('/order/<int:order_id>', methods=['DELETE'])
+def delete_order(order_id):
+    """Delete an Order given the ID of the Order"""
+    order = Order.objects(order_id=order_id).first()
+    order.delete()
+    return jsonify({"result":True,"msg":"Successfully Deleted Order with the given ID"})
 
 if __name__ == "__main__":
     app.run(debug=True, threaded=True)

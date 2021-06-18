@@ -4,82 +4,20 @@ import os
 import datetime
 from flask_mongoengine import MongoEngine
 sys.path.append("...")
-import db
+from routes import *
 
 class Shop(db.Document):
     """Data model for shops."""
-
-    __tablename__ = 'shop'
-    shop_id = db.Column(
-        db.Integer,
-        primary_key=True
-    )
-
-    shop_name = db.Column(
-        db.String(255),
-        index=False,
-        unique=False,
-        nullable=False
-    )
-
-    shop_phone = db.Column(
-        db.String(255),
-        index=True,
-        unique=True,
-        nullable=False
-    )
-
-    shop_address = db.Column(
-        db.Unicode(1000),
-        index=False,
-        unique=False,
-        nullable=False
-    )
-
-    shop_email = db.Column(
-        db.String(80),
-        index=True,
-        unique=True,
-        nullable=False
-    )
-
-    shop_lat = db.Column(
-        db.Unicode(1000),
-        index=False,
-        unique=False,
-        nullable=False,
-    )
-    
-    shop_long = db.Column(
-        db.Unicode(1000),
-        index=False,
-        unique=False,
-        nullable=False,
-    )
-
-    shop_available = db.Column(
-        db.Integer(),
-        index=False,
-        unique=False,
-        nullable=False,
-        default=1
-    )
-
-    shop_created_on = db.Column(
-        db.DateTime,
-        index=False,
-        unique=False,
-        nullable=False,
-        default=datetime.datetime.utcnow
-    )
-
-    shop_updated_on = db.Column(
-        db.DateTime,
-        index=False,
-        unique=False,
-        nullable=True,
-        default=None
-    )
+    shop_id = db.SequenceField(primary_key=True, required=True)
+    shop_name = db.StringField(required=True)
+    shop_phone = db.StringField(required=True)
+    shop_address = db.StringField(required=True)
+    shop_email = db.StringField(required=True)
+    shop_lat = db.DecimalField(required=True)
+    shop_long = db.DecimalField(required=True)
+    shop_available = db.IntField(required=True, default=1) # 0=> Unavailable 1=> Available
+    shop_created_on = db.DateTimeField(required=True, default=datetime.datetime.utcnow)
+    shop_updated_on = db.DateTimeField(default=None)
 
     def __repr__(self):
         return '<Shop {}>'.format(self.shop_name)

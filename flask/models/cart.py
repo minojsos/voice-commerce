@@ -4,9 +4,12 @@ import os
 import datetime
 from flask_mongoengine import MongoEngine
 sys.path.append("...")
-import db
+from routes import *
+# from flask_mongoengine import MongoEngine
 
-class Item(db.Document):
+# db = MongoEngine()
+
+class Cart(db.Document):
     """Data model for carts."""
     cart_id = db.SequenceField(primary_key=True)
     shop_id = db.IntField(required=True,default=1)
