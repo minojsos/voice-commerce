@@ -652,7 +652,6 @@ def voiceassist_en():
             return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
     else:
         return jsonify({"result":False,"msg":"Invalid Request Method","flag":"assistant-error"})
-    return jsonify({"result":True,"msg":"Successfully Retrieved All"})
 
 """
 Voice Assistant - TA
@@ -663,6 +662,37 @@ Retrieve Data based on wht is requested from the Voice Assistant
 @cross_origin(origin='*')
 def voiceassist_ta():
     return jsonify({"result":True,"msg":"Successfully Retrieved All"})
+
+"""
+Example Endpoint to Convert Audio to Text
+"""
+@app.route('/example', methods=["POST"])
+@cross_origin(origin='*')
+def example_audio():
+    if request.method == "POST":
+        # Check if the post request has the file part.
+        if "audioFile" not in request.files:
+            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+        
+        file = request.files["audioFile"]
+        if file.filename == "":
+            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+        
+        if file:
+            # Speech Recognition Stuff.
+            recognizer = sr.Recognizer()
+            audio_file = sr.AudioFile(file)
+            with audio_file as source:
+                audio_data = recognizer.record(source)
+            # line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
+            line = recognizer.recognize_sphinx(audio_data, language="en-US")
+
+            print(line)
+            return jsonify({"result":True,"msg":"Successfully Converted Audio to Text","data":line})
+        else:
+            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+    else:
+        return jsonify({"result":False,"msg":"Invalid Request Method","flag":"assistant-error"})
 
 """
 -----
@@ -944,6 +974,7 @@ def get_item(item_id):
 @app.route('/item', methods=['POST'])
 def new_item():
     """Add New Item to Our Database."""
+    category_id = request.args.post('category_id')
     item_code = request.args.post('item_code')
     shop_id = request.args.post('shop_id')
     item_name = request.args.post('item_name')
@@ -951,7 +982,7 @@ def new_item():
     item_rate = request.args.post('item_rate')
     item_unit = request.args.post('item_unit')
 
-    new_item = Item(item_code=item_code, shop_id=shop_id, item_name=item_name, item_stock=item_stock, item_rate=item_rate, item_unit=item_unit).save()
+    new_item = Item(category_id=category_id, item_code=item_code, shop_id=shop_id, item_name=item_name, item_stock=item_stock, item_rate=item_rate, item_unit=item_unit).save()
     return jsonify({"result":True,"msg":"Successfully Created New Item"})
 
 @app.route('/item/<int:item_id>', methods=['DELETE'])

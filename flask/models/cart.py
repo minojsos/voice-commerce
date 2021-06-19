@@ -12,6 +12,7 @@ class Cart(db.Document):
     shop_id = db.IntField(required=True,default=1)
     user_id = db.IntField(required=True)
     coupon_id = db.IntField(default=None)
+    coupon_value = db.DecimalField(required=True)
     cart_created_on = db.DateTimeField(required=True, default=datetime.datetime.utcnow)
     cart_updated_on = db.DateTimeField(default=None)
 

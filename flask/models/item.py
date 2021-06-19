@@ -9,6 +9,7 @@ from db import *
 class Item(db.Document):
     """Data model for items."""
     item_id = db.SequenceField(primary_key=True)
+    category_id = db.IntField(required=True)
     item_code = db.StringField(required=True)
     shop_id = db.IntField(required=True)
     item_name = db.StringField(required=True)
