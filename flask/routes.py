@@ -160,6 +160,8 @@ def predict_ocr():
 
 
 
+# constant - Hari
+# repeat - Hari
 """
 User Register - Speech to Text Endpoint
 ---------------------------------------
@@ -194,6 +196,7 @@ def register_user():
             
             line = recognizer.recognize_sphinx(audio_data, language="en-US")
 
+            # If empty send an error - Hari
             # line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
 
             if (flag.lower() == "name"):
@@ -422,6 +425,7 @@ def voicesearch_en():
             # We Search Based on the Item Name in the Audio - Expected Audio Format: Item [Item Name] [Qty] [Unit] - Item Rice 2KG
             if "item" in line:
                 # Split By Space Assuming the Text is in the said format - Add some checks to Confirm the format
+                # line index fix - Hari
                 item_det = line.split(" ")
                 item_name = item_det[1] # Item Name
                 item_qty = item_det[2] # Item Quantity
@@ -507,6 +511,8 @@ def voicesearch_en():
                 return jsonify({"result":True,"msg":"Your Total Bill Amount is <INSERT AMOUNT HERE>. The following are the items in your cart.","flag":"search-edit","cart":cart.to_json(),"cartitems":cartitems.to_json(),"items":items.to_json()})
             elif "place order" in line:
                 # Get the user's address and total amount to be paid - Total of All Items
+                # coupons - Hari
+                # offer - Hari
                 user_id = request.form["userId"]
                 cart = Cart.objects(user_id=user_id).first().to_json()
                 cartitems = CartItem.objects(cart_id=cart["cart_id"])
@@ -529,6 +535,7 @@ def voicesearch_en():
                     OrderItem(order_id=order["order_id"],item_id=item["item_id"],item_name=item["item_name"],item_code=item["item_code"],item_rate=item["item_rate"],item_offer_price=item["item_offer_price"],item_qty=item["item_qty"]).save()
                     
                 # delete all items from the Cart
+                # remove cart and cartitem
                 
                 return jsonify({"result":True,"msg":"Your Order has been placed successfully"})
             else:
@@ -652,7 +659,7 @@ Voice Assistant - TA
 -----
 Retrieve Data based on wht is requested from the Voice Assistant
 """
-@app.route('/voicebot/en', methods=["POST"])
+@app.route('/voicebot/ta', methods=["POST"])
 @cross_origin(origin='*')
 def voiceassist_ta():
     return jsonify({"result":True,"msg":"Successfully Retrieved All"})
@@ -1009,6 +1016,15 @@ def delete_order(order_id):
     order = Order.objects(order_id=order_id).first()
     order.delete()
     return jsonify({"result":True,"msg":"Successfully Deleted Order with the given ID"})
+
+"""
+------
+TEST
+------
+"""
+@app.route('/test',methods=['GET'])
+def test_function():
+    return "Test"
 
 if __name__ == "__main__":
     app.run(debug=True, threaded=True)
