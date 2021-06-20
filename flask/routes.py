@@ -39,6 +39,8 @@ import speech_recognition as sr
 import nltk
 from nltk.stem import WordNetLemmatizer
 
+import re
+
 app = Flask(__name__)
 
 # app.config['MONGODB_SETTINGS'] = {
@@ -122,6 +124,116 @@ def build_nlp_model():
     train_set, test_set = featuresets[size:], featuresets[:size]
     classifier = nltk.NaiveBayesClassifier.train(train_set)
 
+"""
+-----
+Constant Start
+-----
+"""
+
+log_converted_image_2_data = "Successfully Converted Image to Text Data"
+log_no_audio = "No Audio Found!"
+log_invalid_method = "Invalid Method"
+log_no_list_file = "No List File Found"
+log_success_register_user = "Successfully Registered User"
+log_fail_register_user = "Failed to Register User"
+log_invalid_flag = "Invalid Flag"
+log_invalid_req_method = "Invalid Request Method"
+log_success_login = "Successfully Logged In!"
+log_fail_login = "Failed to Login!"
+log_chosen_english = "You have Chosen English"
+log_chosen_tamil = "You have Chosen Tamil"
+log_chosen_invalid_lang = "Invalid Language Chosen"
+log_chosen_voice_search = "You have chosen Voice Search!"
+log_chosen_product_list_search = "You have chosen Product List Search!"
+log_chosen_image_search = "You have chosen Image Search!"
+log_chosen_manage_profile = "You have chosen to Manage your Profile!"
+log_chosen_view_your_orders = "You have chosen to View your Orders!"
+log_chosen_light_now_assistant = "You have chosen to use our Light Now Assistant"
+log_chosen_invalid_menu = "The menu item you picked is invalid!"
+log_item_with_name = "Item with name "
+log_success_save_cart = "Successfully Saved Cart"
+log_edit_cart = "You can now edit the items in your cart"
+log_total_bill_and_items_in_cart = "Your Total Bill Amount is <INSERT AMOUNT HERE>. The following are the items in your cart."
+log_order_can_be_placed = "Your order can now be placed"
+log_order_placed_success = "Your Order has been placed successfully"
+log_invalid_audio_cmd = "Invalid Audio Command"
+log_available_coupons = "The following are the available coupons"
+log_item_offers_in_different_shop = "The following are the items that are on offer in different shops!"
+log_view_type_of_orders = "Do you want to see Completed Orders, Cancelled Orders or Pending Orders"
+log_current_pending_orders = "The following are the currently pending orders that you have!"
+log_current_completed_orders = "The following are the currently completed orders that you have!"
+log_success_retrieved_all = "Successfully Retrieved All"
+log_success_converted_audio_2_text = "Successfully Converted Audio to Text"
+log_can_create_list = "You can now create a list!"
+log_success_speech_2_text = "Successfully Converted Speech to Text"
+log_found_follwing_shops = "Found the following shops"
+log_shops_looked_for = "Found the shop you were looking for"
+log_create_new_shop = "Successfully Created New Shop"
+log_delete_shop = "Successfully Deleted Shop with the Given ID"
+log_success_retrieved_all_users = "Successfully Retrieved All Users"
+log_success_retrieved_user = "Successfully Retrieved User with Given ID"
+log_create_new_user = "Successfully Created New User"
+log_delete_user = "Successfully Deleted User with the Given ID"
+log_success_retrieved_all_coupons = "Successfully Retrieved All Coupons"
+log_success_retrieved_coupon = "Successfully Retrieved Coupon with Given ID"
+log_create_new_coupon = "Successfully Created New Coupon"
+log_delete_coupon = "Successfully Deleted Coupon with the Given ID"
+log_success_retrieved_all_items = "Successfully Retrieved All Items"
+log_success_retrieved_category = "Successfully Retrieved Category with Given ID"
+log_create_new_item = "Successfully Created New Item"
+log_delete_item = "Successfully Deleted Item with the Given ID"
+log_success_retrieved_all_categories = "Successfully Retrieved All Categories"
+log_success_retrieved_item = "Successfully Retrieved Item with Given ID"
+log_create_new_category = "Successfully Created New Category"
+log_delete_category = "Successfully Deleted Category with the given ID"
+log_success_retrieved_all_orders = "Successfully Retrieved All Orders"
+log_success_retrieved_order = "Successfully Retrieved Order with Given ID"
+log_delete_order = "Successfully Deleted Order with the given ID"
+
+"""
+-----
+Constant End
+-----
+"""
+
+
+
+"""
+-----
+common functions
+-----
+"""
+
+def text2int(textnum, numwords={}):
+    if not numwords:
+      units = [
+        "zero", "one", "two", "three", "four", "five", "six", "seven", "eight",
+        "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen",
+        "sixteen", "seventeen", "eighteen", "nineteen",
+      ]
+
+      tens = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"]
+
+      scales = ["hundred", "thousand", "million", "billion", "trillion"]
+
+      numwords["and"] = (1, 0)
+      for idx, word in enumerate(units):    numwords[word] = (1, idx)
+      for idx, word in enumerate(tens):     numwords[word] = (1, idx * 10)
+      for idx, word in enumerate(scales):   numwords[word] = (10 ** (idx * 3 or 2), 0)
+
+    current = result = 0
+    for word in textnum.split():
+        if word not in numwords:
+        #   raise Exception("Illegal word: " + word)
+          return "error"
+
+        scale, increment = numwords[word]
+        current = current * scale + increment
+        if scale > 100:
+            result += current
+            current = 0
+
+    return result + current
 
 """
 -----
@@ -135,11 +247,11 @@ def predict_ocr():
     """Generate Text which is in the image"""
     if request.method == "POST":
         if "listFile" not in request.files:
-            return jsonify({"result":False,"msg":"No List File Found"})
+            return jsonify({"result":False,"msg":log_no_list_file})
         
         file = request.files["listFile"]
         if file.filename == "":
-            return jsonify({"result":False,"msg":"No List File Found"})
+            return jsonify({"result":False,"msg":log_no_list_file})
         
         if file:
             # Save Image and Call the NanoNets API with the Model ID and file.
@@ -154,14 +266,14 @@ def predict_ocr():
             response = requests.post(url, auth=requests.auth.HTTPBasicAuth(api_key, ''), files=data)
 
             print(response.text)
-            return jsonify({"result":True,"msg":"Successfully Converted Image to Text Data","data":response.text})
+            return jsonify({"result":True,"msg":log_converted_image_2_data,"data":response.text})
     else:
-        return jsonify({"result":False,"msg":"Invalid Method"})
+        return jsonify({"result":False,"msg":log_invalid_method})
 
 
 
-# constant - Hari
 # repeat - Hari
+# constant - Hari
 """
 User Register - Speech to Text Endpoint
 ---------------------------------------
@@ -181,11 +293,11 @@ def register_user():
         flag = request.form["flag"]
         # Check if the POST Request has the File Part.
         if "audioFile" not in request.files:
-            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
         
         file = request.files['audioFile']
         if file.filename == "":
-            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
 
         if file:
             # Speech Recognition Stuff.
@@ -199,7 +311,12 @@ def register_user():
             # If empty send an error - Hari
             # line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
 
-            if (flag.lower() == "name"):
+            if(line == "" or line == None):
+                return jsonify({"result":False,"msg":log_invalid_audio_cmd,"flag":"invalid register-process","data":""})
+            elif (flag.lower() == "" or flag.lower() == None):
+                # This is invalid flag
+                return jsonify({"result":False,"msg":log_invalid_audio_cmd,"flag":"invalid register-process","data":""})
+            elif (flag.lower() == "name"):
                 # This is the Name of the user
                 return jsonify({"result":True,"msg":"","flag":"register-process","data":line})
             elif (flag.lower() == "email"):
@@ -223,15 +340,15 @@ def register_user():
 
                     User(name=name, email=email,phone=phone,address=address,latitude=latitude,longitude=longitude).save()
 
-                    return jsonify({"result":True,"msg":"Successfully Registered User","flag":"register-success"})
+                    return jsonify({"result":True,"msg":log_success_register_user,"flag":"register-success"})
                 except:
-                    return jsonify({"result":False,"msg":"Failed to Register User","flag":"register-error"})
+                    return jsonify({"result":False,"msg":log_fail_register_user,"flag":"register-error"})
             else:
-                return jsonify({"result":False,"msg":"Invalid Flag","flag":"register-error"})
+                return jsonify({"result":False,"msg":log_invalid_flag,"flag":"register-error"})
         else:
-            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
     else:
-        return jsonify({"result":False,"msg":"Invalid Request Method","flag":"register-error"})
+        return jsonify({"result":False,"msg":log_invalid_req_method,"flag":"register-error"})
 
 """
 User Login - Speech to Text Endpoint
@@ -249,11 +366,11 @@ def login_user():
         flag = request.form["flag"]
         # Check if the POST Request has the File Part.
         if "audioFile" not in request.files:
-            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
         
         file = request.files['audioFile']
         if file.filename == "":
-            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
 
         if file:
             # Speech Recognition Stuff.
@@ -270,13 +387,13 @@ def login_user():
             loggedin_user = User.objects(email=line).first()
 
             if (loggedin_user != None):
-                return jsonify({"result":True,"msg":"Successfully Logged In!","flag":"login-success"})
+                return jsonify({"result":True,"msg":log_success_login,"flag":"login-success"})
             else:
-                return jsonify({"result":False,"msg":"Failed to Login!","flag":"login-error"})
+                return jsonify({"result":False,"msg":log_fail_login,"flag":"login-error"})
         else:
-            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
     else:
-        return jsonify({"result":False,"msg":"Invalid Request Method","flag":"login-error"})
+        return jsonify({"result":False,"msg":log_invalid_req_method,"flag":"login-error"})
 
 """
 Language Picker - English or Tamil
@@ -288,11 +405,11 @@ def language_picker():
     if request.method == "POST":
         # Check if the post request has the file part.
         if "audioFile" not in request.files:
-            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
         
         file = request.files['audioFile']
         if file.filename == "":
-            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
         
         if file:
             # Speech Recognition Stuff.
@@ -304,18 +421,18 @@ def language_picker():
             line = recognizer.recognize_sphinx(audio_data, language="en-US")
 
             if ("english" in line) and ("tamil" not in line):
-                return jsonify({"result":False,"msg":"You have Chosen English","flag":"language-success","language":"english"})
+                return jsonify({"result":False,"msg":log_chosen_english,"flag":"language-success","language":"english"})
             elif ("english" not in line) and ("tamil" in line):
-                return jsonify({"result":False,"msg":"You have Chosen Tamil","flag":"language-success","language":"tamil"})
+                return jsonify({"result":False,"msg":log_chosen_tamil,"flag":"language-success","language":"tamil"})
             elif ("english" in line) and ("tamil" in line):
-                return jsonify({"result":False,"msg":"Invalid Language Chosen","flag":"language-error","language":"invalid"})
+                return jsonify({"result":False,"msg":log_chosen_invalid_lang,"flag":"language-error","language":"invalid"})
             else:
-                return jsonify({"result":False,"msg":"Invalid Language Chosen","flag":"language-error","language":"invalid"})
+                return jsonify({"result":False,"msg":log_chosen_invalid_lang,"flag":"language-error","language":"invalid"})
             
         else:
-            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
     else:
-        return jsonify({"result":False,"msg":"Invalid Request Method","flag":"language-error"})
+        return jsonify({"result":False,"msg":log_invalid_req_method,"flag":"language-error"})
 
 """
 Navigation - English
@@ -329,11 +446,11 @@ def navigation_en():
     if request.method == "POST":
         # Check if the post request has the file part.
         if "audioFile" not in request.files:
-            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
         
         file = request.files['audioFile']
         if file.filename == "":
-            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
         
         if file:
             # Speech Recognition Stuff.
@@ -345,23 +462,23 @@ def navigation_en():
             line = recognizer.recognize_sphinx(audio_data, language="en-US")
 
             if "voice search" in line:
-                return jsonify({"result":True,"msg":"You have chosen Voice Search!","flag":"voice-search"})
+                return jsonify({"result":True,"msg":log_chosen_voice_search,"flag":"voice-search"})
             elif "product list search" in line:
-                return jsonify({"result":True,"msg":"You have chosen Product List Search!","flag":"create-list"})
+                return jsonify({"result":True,"msg":log_chosen_product_list_search,"flag":"create-list"})
             elif "image search" in line:
-                return jsonify({"result":True,"msg":"You have chosen Image Search!","flag":"image-list"})
+                return jsonify({"result":True,"msg":log_chosen_image_search,"flag":"image-list"})
             elif "profile" in line:
-                return jsonify({"result":True,"msg":"You have chosen to Manage your Profile!","flag":"profile"})
+                return jsonify({"result":True,"msg":log_chosen_manage_profile,"flag":"profile"})
             elif "orders" in line:
-                return jsonify({"result":True,"msg":"You have chosen to View your Orders!","flag":"order"})
+                return jsonify({"result":True,"msg":log_chosen_view_your_orders,"flag":"order"})
             elif "assistant" in line:
-                return jsonify({"result":True,"msg":"You have chosen to use our Light Now Assistant","flag":"assistant"})
+                return jsonify({"result":True,"msg":log_chosen_light_now_assistant,"flag":"assistant"})
             else:
-                return jsonify({"result":True,"msg":"The menu item you picked is invalid!","flag":"navigation-error"})
+                return jsonify({"result":True,"msg":log_chosen_invalid_menu,"flag":"navigation-error"})
         else:
-            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
     else:
-        return jsonify({"result":False,"msg":"Invalid Request Method","flag":"navigation-error"})
+        return jsonify({"result":False,"msg":log_invalid_req_method,"flag":"navigation-error"})
 
 """
 Navigation - Tamil
@@ -375,11 +492,11 @@ def navigation_ta():
     if request.method == "POST":
         # Check if the post request has the file part.
         if "audioFile" not in request.files:
-            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
         
         file = request.files['audioFile']
         if file.filename == "":
-            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
         
         if file:
             # Speech Recognition Stuff.
@@ -391,15 +508,16 @@ def navigation_ta():
 
             return jsonify({"result":True})
         else:
-            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
     else:
-        return jsonify({"result":False,"msg":"Invalid Request Method","flag":"navigation-error"})
+        return jsonify({"result":False,"msg":log_invalid_req_method,"flag":"navigation-error"})
 
 """
 Voice Search - Create List (EN)
 ----
 This Endpoint allows to Search for Each item and Allow User to Pick the Item they Want to Add to their Cart.
 """
+# Hari
 @app.route('/voicesearch/en', methods=["GET","POST"])
 @cross_origin(origin='*')
 def voicesearch_en():
@@ -407,11 +525,11 @@ def voicesearch_en():
     if request.method == "POST":
         # Check if the post request has the file part.
         if "audioFile" not in request.files:
-            return jsonify({"result":False,"msg":"No Audio Found!"})
+            return jsonify({"result":False,"msg":log_no_audio})
         
         file = request.files["audioFile"]
         if file.filename == "":
-            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
         
         if file:
             # Speech Recognition Stuff.
@@ -425,11 +543,98 @@ def voicesearch_en():
             # We Search Based on the Item Name in the Audio - Expected Audio Format: Item [Item Name] [Qty] [Unit] - Item Rice 2KG
             if "item" in line:
                 # Split By Space Assuming the Text is in the said format - Add some checks to Confirm the format
-                # line index fix - Hari
+
+                item_name = "" # Item Name
+                item_qty = 0 # Item Quantity
+                item_unit = "" # Item Unit
+
+                handled = False
+                i = 0
+                # Handle numeric numbers
+                words = line.split()
+                for word in words:
+                    isNumeric = re.search("^[1-9]\d*(\.\d+)?$", word)
+                    if(isNumeric):
+                        break
+                    i = i + 1
+
+                wordsLength = len(words)
+                if(wordsLength != i):
+                    handled = True
+                    other = line.split(" " + words[i] + " ")
+                    print(other[0])
+                    print(float(words[i]))
+                    print(other[1])
+                    
+                    item_name = other[0] # Item Name
+                    item_qty = float(words[i]) # Item Quantity
+                    item_unit = other[1] # Item Unit
+
+                # Handle English word numbers
+                if(handled == False):
+                    isFound = False
+                    isDotFound = False
+                    isPointFound = False
+
+                    wordNumber = ""
+                    for word in words:
+
+                        if(word.lower() == "point"):
+                            isPointFound = True
+                            wordNumber = wordNumber + " point"
+                        elif(word.lower() == "dot"):
+                            isDotFound = True
+                            wordNumber = wordNumber + " dot"
+                        elif(text2int(word.lower()) != "error" and word.lower() != "and" and isFound):
+                            isFound = True
+                            wordNumber = wordNumber + " " + word.lower()
+                        elif(text2int(word.lower()) != "error" and word.lower() != "and" and isFound == False):
+                            isFound = True
+                            wordNumber = word.lower()
+                        elif(word.lower() == "and" and isFound == True):
+                            wordNumber = wordNumber + " " + word.lower()
+
+                    print("wordNumber: " + wordNumber)
+
+                    numberStr = ""
+
+                    if(isDotFound):
+                        numberWords = wordNumber.split(" dot ")
+                        decimals = numberWords[1].split()
+
+                        numberStr = str(text2int(numberWords[0]))
+                        numberStr = numberStr + "."
+                        for decimal in decimals:
+                            numberStr = numberStr + str(text2int(decimal))
+
+                    if(isPointFound):
+                        numberWords = wordNumber.split(" point ")
+                        decimals = numberWords[1].split()
+
+                        numberStr = str(text2int(numberWords[0]))
+                        numberStr = numberStr + "."
+                        for decimal in decimals:
+                            numberStr = numberStr + str(text2int(decimal))
+
+                    if(isDotFound == False and isPointFound == False):
+                        numberStr = str(text2int(wordNumber))
+
+                    print("numberStr: " + numberStr)
+                    value = numberStr
+
+                    other = line.split(" " + wordNumber + " ")
+                    print(other[0])
+                    print(float(value))
+                    print(other[1])
+
+                    item_name = other[0] # Item Name
+                    item_qty = float(value) # Item Quantity
+                    item_unit = other[1] # Item Unit
+
                 item_det = line.split(" ")
-                item_name = item_det[1] # Item Name
-                item_qty = item_det[2] # Item Quantity
-                item_unit = item_det[3] # Item Unit
+                # item_name = item_det[1] # Item Name
+                # item_qty = item_det[2] # Item Quantity
+                # item_unit = item_det[3] # Item Unit
 
                 # Check if the Item exists by the name
                 item = Item.objects(item_name=item_name).first()
@@ -449,21 +654,21 @@ def voicesearch_en():
                                 # Stock Available
                                 # Add to Cart and Send Response Back to User
                                 CartItem(cart_id=cart["cart_id"], item_id=item_jsn["item_id"], item_name=item_jsn["item_name"], item_code=item_jsn["item_code"], item_rate=item_jsn["item_rate"], item_offer_price=item_jsn["item_offer_price"], item_qty=item_qty).save() # Save the Item to the Cart
-                                return jsonify({"result":True,"msg":"Item with name " + item_name + " and Quantity " + item_qty + " has been successfully added to your Cart!","flag":"search-success"})
+                                return jsonify({"result":True,"msg":log_item_with_name + item_name + " and Quantity " + item_qty + " has been successfully added to your Cart!","flag":"search-success"})
                             
                             else:
-                                return jsonify({"result":False,"msg":"Item with name " + item_name + " has only " + str(item_jsn["item_stock"]) + " " + item_jsn["item_unit"] + "!","flag":"search-error"})
+                                return jsonify({"result":False,"msg":log_item_with_name + item_name + " has only " + str(item_jsn["item_stock"]) + " " + item_jsn["item_unit"] + "!","flag":"search-error"})
                         else:
                             # Item Already in Cart. So Update the Existing
                             cartitm_item_qty = cartitem.to_json()["item_qty"]
                             if (item_jsn["item_stock"] >= (cartitm_item_qty + item_qty)):
                                 # Stock Available
                                 cartitem.update(item_qty=(cartitm_item_qty+item_qty))
-                                return jsonify({"result":True,"msg":"Item with name " + item_name + " and Quantity " + item_qty + " has been successfully updated in your Cart! New Quantity is " + str((cartitm_item_qty + item_qty)),"flag":"search-success"})
+                                return jsonify({"result":True,"msg":log_item_with_name + item_name + " and Quantity " + item_qty + " has been successfully updated in your Cart! New Quantity is " + str((cartitm_item_qty + item_qty)),"flag":"search-success"})
                             
                             else:
                                 # Stock Not Available
-                                return jsonify({"result":False,"msg":"Item with name " + item_name + " has only " + str(item_jsn["item_stock"]) + " " + item_jsn["item_unit"] + "!", "flag":"search-error"})
+                                return jsonify({"result":False,"msg":log_item_with_name + item_name + " has only " + str(item_jsn["item_stock"]) + " " + item_jsn["item_unit"] + "!", "flag":"search-error"})
 
                     else:
                         
@@ -476,13 +681,13 @@ def voicesearch_en():
                             cart = Cart(user_id=request.form["userId"]).save() # Create New Cart and get the Cart Object
                             CartItem(cart_id=cart.cart_id, item_id=item_jsn["item_id"], item_name=item_jsn["item_name"], item_code=item_jsn["item_code"], item_rate=item_jsn["item_rate"], item_offer_price=item_jsn["item_offer_price"], item_qty=item_qty).save() # Save the Item to the Cart
 
-                            return jsonify({"result":True,"msg":"Item with name " + item_name + " and Quantity " + item_qty + " has been successfully added to your Cart!", "flag":"search-success"})
+                            return jsonify({"result":True,"msg":log_item_with_name + item_name + " and Quantity " + item_qty + " has been successfully added to your Cart!", "flag":"search-success"})
                         
                         else:
-                            return jsonify({"result":False,"msg":"Item with name " + item_name + " has only " + str(item_jsn["item_stock"]) + " " + item_jsn["item_unit"] + "!","flag":"search-error"})
+                            return jsonify({"result":False,"msg":log_item_with_name + item_name + " has only " + str(item_jsn["item_stock"]) + " " + item_jsn["item_unit"] + "!","flag":"search-error"})
                 
                 else:
-                    return jsonify({"result":False, "msg":"Item with name " + item_name + " not found!","flag":"search-error"})
+                    return jsonify({"result":False, "msg":log_item_with_name + item_name + " not found!","flag":"search-error"})
             elif "save changes" in line:
                 # Save the Cart and Proceed to next screen to confirm
                 # Get the Current Cart of the User. So Expects the userId
@@ -491,7 +696,7 @@ def voicesearch_en():
                 cartitems = CartItem.objects(cart_id=cart.to_json()["cart_id"])
                 items = Item.objects(shop_id=cart.to_json()["shop_id"])
                 
-                return jsonify({"result":True,"msg":"Successfully Saved Cart","flag":"search-save","cart":cart.to_json(),"cartitems":cartitems.to_json(),"items":items.to_json()})
+                return jsonify({"result":True,"msg":log_success_save_cart,"flag":"search-save","cart":cart.to_json(),"cartitems":cartitems.to_json(),"items":items.to_json()})
             elif "alter" in line:
                 # Take the user back to the Edit Screen
                 user_id = request.form["userId"]
@@ -499,7 +704,7 @@ def voicesearch_en():
                 cartitems = CartItem.objects(cart_id=cart.to_json()["cart_id"])
                 items = Item.objects(shop_id=cart.to_json()["shop_id"])
                 
-                return jsonify({"result":True,"msg":"You can now edit the items in your cart","flag":"search-edit","cart":cart.to_json(),"cartitems":cartitems.to_json(),"items":items.to_json()})
+                return jsonify({"result":True,"msg":log_edit_cart,"flag":"search-edit","cart":cart.to_json(),"cartitems":cartitems.to_json(),"items":items.to_json()})
             elif "search" in line:
                 # Search it Against the Availability
                 # not in first 50% - Instead take them to the Place Order Page
@@ -508,7 +713,7 @@ def voicesearch_en():
                 cartitems = CartItem.objects(cart_id=cart.to_json()["cart_id"])
                 items = Item.objects(shop_id=cart.to_json()["shop_id"])
                 
-                return jsonify({"result":True,"msg":"Your Total Bill Amount is <INSERT AMOUNT HERE>. The following are the items in your cart.","flag":"search-edit","cart":cart.to_json(),"cartitems":cartitems.to_json(),"items":items.to_json()})
+                return jsonify({"result":True,"msg":log_total_bill_and_items_in_cart,"flag":"search-edit","cart":cart.to_json(),"cartitems":cartitems.to_json(),"items":items.to_json()})
             elif "place order" in line:
                 # Get the user's address and total amount to be paid - Total of All Items
                 # coupons - Hari
@@ -517,9 +722,21 @@ def voicesearch_en():
                 cart = Cart.objects(user_id=user_id).first().to_json()
                 cartitems = CartItem.objects(cart_id=cart["cart_id"])
                 user = User.objects(user_id=user_id).first().to_json()
-                total=0
 
-                return jsonify({"result":True,"msg":"Your order can now be placed","address":user["user_address"],"total":total,"payment":"Cash On Delivery"})
+                couponValue = 0
+                if(cart["coupon_value"] != None or cart["coupon_value"] > 0):
+                    couponValue = cart["coupon_value"]
+
+                totalValue = 0
+                for cartitemObj in cartitems:
+                    if(cartitemObj["item_offer_price"] != None or cartitemObj["item_offer_price"] > 0):
+                        totalValue = totalValue + cartitemObj["item_offer_price"]
+                    else:
+                        totalValue = totalValue + cartitemObj["item_rate"]
+
+                total = totalValue - couponValue
+
+                return jsonify({"result":True,"msg":log_order_can_be_placed,"address":user["user_address"],"total":total,"payment":"Cash On Delivery"})
                 # Iterate and tally the total
             elif "checkout" in line:
                 # Place the Order by Moving the Cart to the Order and CartItem to OrderItem
@@ -537,14 +754,14 @@ def voicesearch_en():
                 # delete all items from the Cart
                 # remove cart and cartitem
                 
-                return jsonify({"result":True,"msg":"Your Order has been placed successfully"})
+                return jsonify({"result":True,"msg":log_order_placed_success})
             else:
-                return jsonify({"result":False,"msg":"Invalid Audio Command","flag":"search-error"})
+                return jsonify({"result":False,"msg":log_invalid_audio_cmd,"flag":"search-error"})
         
         else:
-            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
     else:
-        return jsonify({"result":False,"msg":"Invalid Request Method","flag":"search-error"})
+        return jsonify({"result":False,"msg":log_invalid_req_method,"flag":"search-error"})
 
 """
 Voice Search - Create List (LK)
@@ -558,11 +775,11 @@ def voicesearch_ta():
     if request.method == "POST":
         # Check if the post request has the file part.
         if "audioFile" not in request.files:
-            return jsonify({"result":False,"msg":"No Audio Found!"})
+            return jsonify({"result":False,"msg":log_no_audio})
         
         file = request.files["audioFile"]
         if file.filename == "":
-            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
         
         if file:
             # Speech Recognition Stuff.
@@ -574,9 +791,9 @@ def voicesearch_ta():
 
             return jsonify({"result":True})
         else:
-            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
     else:
-        return jsonify({"result":False,"msg":"Invalid Request Method","flag":"navigation-error"})
+        return jsonify({"result":False,"msg":log_invalid_req_method,"flag":"navigation-error"})
 
 """
 Voice Assistant - EN
@@ -589,11 +806,11 @@ def voiceassist_en():
     if request.method == "POST":
         # Check if the post request has the file part.
         if "audioFile" not in request.files:
-            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
         
         file = request.files["audioFile"]
         if file.filename == "":
-            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
         
         if file:
             # Speech Recognition Stuff.
@@ -610,26 +827,26 @@ def voiceassist_en():
                 coupons = Coupon.objects().to_json()
                 usercoupons = UserCoupon.objects(user_id=user_id).to_json()
 
-                return jsonify({"result":True,"msg":"The following are the available coupons","flag":"coupon-success"})
+                return jsonify({"result":True,"msg":log_available_coupons,"flag":"coupon-success"})
             elif ("offer" in line) or ("offers" in line):
                 # Retrieve All Offers - Where item_offer_price is not None
                 items = Item.objects.filter(item_offer_price__isnull=False).to_json()
                 shops = Shop.objects().to_json()
 
-                return jsonify({"result":True,"msg":"The following are the items that are on offer in different shops!","flag":"offer-success","items":items,"shops":shops})
+                return jsonify({"result":True,"msg":log_item_offers_in_different_shop,"flag":"offer-success","items":items,"shops":shops})
             
             elif ("order" in line) or ("orders" in line):
-                return jsonify({"result":True,"msg":"Do you want to see Completed Orders, Cancelled Orders or Pending Orders","flag":"order-menu"})
+                return jsonify({"result":True,"msg":log_view_type_of_orders,"flag":"order-menu"})
             
             elif ("pending" in line) or ("pending orders" in line):
                 # Retrieve Pending orders
                 orders = Order.objects(order_status=0).to_json()
-                return jsonify({"result":True, "msg":"The following are the currently pending orders that you have!","flag":"order-pending","orders":orders})
+                return jsonify({"result":True, "msg":log_current_pending_orders,"flag":"order-pending","orders":orders})
             
             elif ("completed" in line) or ("completed orders" in line):
                 # Retrieve Completed Orders
                 orders = Order.objects(order_status=1).to_json()
-                return jsonify({"result":True, "msg":"The following are the currently completed orders that you have!","flag":"order-completed","orders":orders})
+                return jsonify({"result":True, "msg":log_current_completed_orders,"flag":"order-completed","orders":orders})
             
             elif ("cancelled" in line) or ("cancelled orders" in line):
                 # Retrieve Cancelled Orders
@@ -649,9 +866,9 @@ def voiceassist_en():
                 # Get the Profile Details
                 return None
         else:
-            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
     else:
-        return jsonify({"result":False,"msg":"Invalid Request Method","flag":"assistant-error"})
+        return jsonify({"result":False,"msg":log_invalid_req_method,"flag":"assistant-error"})
 
 """
 Voice Assistant - TA
@@ -661,7 +878,7 @@ Retrieve Data based on wht is requested from the Voice Assistant
 @app.route('/voicebot/ta', methods=["POST"])
 @cross_origin(origin='*')
 def voiceassist_ta():
-    return jsonify({"result":True,"msg":"Successfully Retrieved All"})
+    return jsonify({"result":True,"msg":log_success_retrieved_all})
 
 """
 Example Endpoint to Convert Audio to Text
@@ -672,11 +889,11 @@ def example_audio():
     if request.method == "POST":
         # Check if the post request has the file part.
         if "audioFile" not in request.files:
-            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
         
         file = request.files["audioFile"]
         if file.filename == "":
-            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
         
         if file:
             # Speech Recognition Stuff.
@@ -688,11 +905,11 @@ def example_audio():
             line = recognizer.recognize_sphinx(audio_data, language="en-US")
 
             print(line)
-            return jsonify({"result":True,"msg":"Successfully Converted Audio to Text","data":line})
+            return jsonify({"result":True,"msg":log_success_converted_audio_2_text,"data":line})
         else:
-            return jsonify({"result":False,"msg":"No Audio Found!","flag":"file-error"})
+            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
     else:
-        return jsonify({"result":False,"msg":"Invalid Request Method","flag":"assistant-error"})
+        return jsonify({"result":False,"msg":log_invalid_req_method,"flag":"assistant-error"})
 
 """
 -----
@@ -708,11 +925,11 @@ def speech_to_text_en():
     if request.method == "POST":
         # Check if the post request has the file part.
         if "audioFile" not in request.files:
-            return jsonify({"result":False,"msg":"No Audio Found"})
+            return jsonify({"result":False,"msg":log_no_audio})
 
         file = request.files["audioFile"]
         if file.filename == "":
-            return jsonify({"result":False,"msg":"No Audio Found"})
+            return jsonify({"result":False,"msg":log_no_audio})
 
         if file:
             # Speech Recognition stuff.
@@ -730,7 +947,7 @@ def speech_to_text_en():
 
             # Check what the command is
             if "create" in extra_line and "list" in extra_line:
-                return jsonify({"result":True,"msg":"You can now create a list!","flag":"create-list"})
+                return jsonify({"result":True,"msg":log_can_create_list,"flag":"create-list"})
             
             # Check which command this is
             if "coupons" in extra_line:
@@ -756,9 +973,9 @@ def speech_to_text_en():
                         return jsonify({"result":True,"item":itm})
 
 
-            return jsonify({"result":True,"msg":"Successfully Converted Speech to Text","command":extra_line})
+            return jsonify({"result":True,"msg":log_success_speech_2_text,"command":extra_line})
     else:
-        return jsonify({"result":False,"msg":"Invalid Method"})
+        return jsonify({"result":False,"msg":log_invalid_method})
 
 """
 Search Items given the List as a JSON
@@ -807,11 +1024,11 @@ def speech_to_text_ta():
     if request.method == "POST":
         # Check if the post request has the file part.
         if "audioFile" not in request.files:
-            return jsonify({"result":False,"msg":"No Audio Found"})
+            return jsonify({"result":False,"msg":log_no_audio})
 
         file = request.files["audioFile"]
         if file.filename == "":
-            return jsonify({"result":False,"msg":"No Audio Found"})
+            return jsonify({"result":False,"msg":log_no_audio})
 
         if file:
             # Speech Recognition stuff.
@@ -829,9 +1046,9 @@ def speech_to_text_ta():
             filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
             file.save(filepath)
 
-            return jsonify({"result":True,"msg":"Successfully Converted Speech to Text","command":extra_line})
+            return jsonify({"result":True,"msg":log_success_speech_2_text,"command":extra_line})
     else:
-        return jsonify({"result":False,"msg":"Invalid Method"})
+        return jsonify({"result":False,"msg":log_invalid_method})
 
 """
 ------
@@ -844,7 +1061,7 @@ def get_all_shops():
     """Retrieve all shops from our database."""
     shops = Shop.objects().to_json()
 
-    return jsonify({"result":True,"msg":"Found the following shops","data":shops})
+    return jsonify({"result":True,"msg":log_found_follwing_shops,"data":shops})
 
 @app.route('/shop/<int:shop_id>', methods=['GET'])
 @cross_origin(origin='*')
@@ -852,7 +1069,7 @@ def get_shop(shop_id):
     """Retrieve the Shop with the Given Shop ID"""
     shop = Shop.objects(shop_id=shop_id).first().to_json()
     
-    return jsonify({"result":True,"msg":"Found the shop you were looking for","data":shop})
+    return jsonify({"result":True,"msg":log_shops_looked_for,"data":shop})
 
 @app.route('/shop', methods=['POST'])
 @cross_origin(origin='*')
@@ -868,7 +1085,7 @@ def new_shop():
 
     """Create a user via query string parameters."""
     new_shop = Shop(shop_name=shop_name, shop_phone=shop_phone, shop_address=shop_addr, shop_email=shop_email, shop_lat=shop_lat, shop_long=shop_long, shop_available=shop_available).save()
-    return jsonify({"result":True,"msg":"Successfully Created New Shop"})
+    return jsonify({"result":True,"msg":log_create_new_shop})
 
 @app.route('/shop/<int:shop_id>',methods=['DELETE'])
 @cross_origin(origin='*')
@@ -877,7 +1094,7 @@ def delete_shop(shop_id):
     shop = Shop.objects(shop_id=shop_id).first()
     shop.delete()
 
-    return jsonify({"result":True,"msg":"Successfully Deleted Shop with the Given ID"})
+    return jsonify({"result":True,"msg":log_delete_shop})
 
 """
 ------
@@ -889,14 +1106,14 @@ USER
 def get_all_users():
     """Retrieve all Users from our database."""
     users = User.objects().to_json()
-    return jsonify({"result":True,"msg":"Successfully Retrieved All Users","data":users})
+    return jsonify({"result":True,"msg":log_success_retrieved_all_users,"data":users})
 
 @app.route('/user/<int:user_id>', methods=['GET'])
 @cross_origin(origin='*')
 def get_user(user_id):
     """Retrieve the User with the Given User ID"""
     user = User.objects(user_id=user_id).first().to_json()
-    return jsonify({"result":True,"msg":"Successfully Retrieved User with Given ID","data":user})
+    return jsonify({"result":True,"msg":log_success_retrieved_user,"data":user})
 
 @app.route('/user', methods=['POST'])
 @cross_origin(origin='*')
@@ -910,7 +1127,7 @@ def new_user():
 
     """Create a user via query string parameters."""
     new_user = User(user_name=user_name, user_phone=user_phone, user_email=user_email, user_password=user_password, user_address=user_address).save()
-    return jsonify({"result":True,"msg":"Successfully Created New User"})
+    return jsonify({"result":True,"msg":log_create_new_user})
 
 @app.route('/user/<int:user_id>', methods=['DELETE'])
 @cross_origin(origin='*')
@@ -919,7 +1136,7 @@ def delete_user(user_id):
     user = User.objects(user_id=user_id).first()
     user.delete()
 
-    return jsonify({"result":True,"msg":"Successfully Deleted User with the Given ID"})
+    return jsonify({"result":True,"msg":log_delete_user})
 
 """
 --------
@@ -930,13 +1147,13 @@ COUPON
 def get_all_coupons():
     """Retrieve all Coupons from our database."""
     coupons = Coupon.objects().to_json()
-    return jsonify({"result":True,"msg":"Successfully Retrieved All Coupons","data":coupons})
+    return jsonify({"result":True,"msg":log_success_retrieved_all_coupons,"data":coupons})
 
 @app.route('/coupon/<int:coupon_id>',methods=['GET'])
 def get_coupon(coupon_id):
     """Retrieve a Coupon given the ID of the Coupon"""
     coupon = Coupon.objects(coupon_id=coupon_id).first().to_json()
-    return jsonify({"result":True,"msg":"Successfully Retrieved Coupon with Given ID","data":coupon})
+    return jsonify({"result":True,"msg":log_success_retrieved_coupon,"data":coupon})
 
 @app.route('/coupon',methods=['POST'])
 def new_coupon():
@@ -945,14 +1162,14 @@ def new_coupon():
     coupon_value = request.args.post('coupon_value')
 
     new_coupon = Coupon(shop_id=shop_id, coupon_value=coupon_value).save()
-    return jsonify({"result":True,"msg":"Successfully Created New Coupon"})
+    return jsonify({"result":True,"msg":log_create_new_coupon})
 
 @app.route('/coupon/<int:coupon_id>', methods=['DELETE'])
 def delete_coupon(coupon_id):
     """Delete a Coupon given the ID of the Coupon"""
     coupon = Coupon.objects(coupon_id=coupon_id).first().to_json()
     coupon.delete()
-    return jsonify({"result":True,"msg":"Successfully Deleted Coupon with the Given ID"})
+    return jsonify({"result":True,"msg":log_delete_coupon})
 
 """
 -------
@@ -963,13 +1180,13 @@ ITEM
 def get_all_items():
     """Retrieve all items from our database."""
     items = Item.objects().to_json()
-    return jsonify({"result":True,"msg":"Successfully Retrieved All Items","data":items})
+    return jsonify({"result":True,"msg":log_success_retrieved_all_items,"data":items})
 
 @app.route('/item/<int:item_id>', methods=['GET'])
 def get_item(item_id):
     """Retrieve an item given the ID of the Item"""
     item = Item.objects(item_id=item_id).to_json()
-    return jsonify({"result":True,"msg":"Successfully Retrieved Item with Given ID","data":item})
+    return jsonify({"result":True,"msg":log_success_retrieved_item,"data":item})
 
 @app.route('/item', methods=['POST'])
 def new_item():
@@ -983,14 +1200,14 @@ def new_item():
     item_unit = request.args.post('item_unit')
 
     new_item = Item(category_id=category_id, item_code=item_code, shop_id=shop_id, item_name=item_name, item_stock=item_stock, item_rate=item_rate, item_unit=item_unit).save()
-    return jsonify({"result":True,"msg":"Successfully Created New Item"})
+    return jsonify({"result":True,"msg":log_create_new_item})
 
 @app.route('/item/<int:item_id>', methods=['DELETE'])
 def delete_item(item_id):
     """Delete an item given the ID of the Item"""
     item = Item.query.get_or_404(item_id).first()
     item.delete()
-    return jsonify({"result":True,"msg":"Successfully Deleted Item with the Given ID"})
+    return jsonify({"result":True,"msg":log_delete_item})
 
 """
 ----------
@@ -1001,13 +1218,13 @@ CATEGORY
 def get_all_categories():
     """Retrieve all Categories from our database."""
     categories = Category.objects().to_json()
-    return jsonify({"result":True,"msg":"Successfully Retrieved All Categories","data":categories})
+    return jsonify({"result":True,"msg":log_success_retrieved_all_categories,"data":categories})
 
 @app.route('/category/<int:category_id>', methods=['GET'])
 def get_category(category_id):
     """Retrieve a Category given the ID of the Category"""
     category = Category.objects().first().to_json()
-    return jsonify({"result":True,"msg":"Successfully Retrieved Item with Given ID","data":category})
+    return jsonify({"result":True,"msg":log_success_retrieved_category,"data":category})
 
 @app.route('/category',methods=['POST'])
 def new_category():
@@ -1015,14 +1232,14 @@ def new_category():
     category_name = request.args.post('category_name')
 
     new_category = Category(category_name=category_name).save()
-    return jsonify({"result":True,"msg":"Successfully Created New Category"})
+    return jsonify({"result":True,"msg":log_create_new_category})
 
 @app.route('/category/<int:category_id>', methods=['DELETE'])
 def delete_category(category_id):
     """Delete a Category given the ID of the Category"""
     category = Category.objects(category_id=category_id).first()
     category.delete()
-    return jsonify({"result":True,"msg":"Successfully Deleted Category with the given ID"})
+    return jsonify({"result":True,"msg":log_delete_category})
 
 """
 ------
@@ -1033,20 +1250,20 @@ ORDER
 def get_all_orders():
     """Retrieve all Orders"""
     orders = Order.objects().to_json()
-    return jsonify({"result":True,"msg":"Successfully Retrieved All Orders","data":orders})
+    return jsonify({"result":True,"msg":log_success_retrieved_all_orders,"data":orders})
 
 @app.route('/order/<int:order_id>',methods=['GET'])
 def get_order(order_id):
     """Retrieve a Order given the ID of the Order"""
     order = Order.objects().first().to_json()
-    return jsonify({"result":True,"msg":"Successfully Retrieved Order with Given ID","data":order})
+    return jsonify({"result":True,"msg":log_success_retrieved_order,"data":order})
 
 @app.route('/order/<int:order_id>', methods=['DELETE'])
 def delete_order(order_id):
     """Delete an Order given the ID of the Order"""
     order = Order.objects(order_id=order_id).first()
     order.delete()
-    return jsonify({"result":True,"msg":"Successfully Deleted Order with the given ID"})
+    return jsonify({"result":True,"msg":log_delete_order})
 
 """
 ------
@@ -1055,6 +1272,12 @@ TEST
 """
 @app.route('/test',methods=['GET'])
 def test_function():
+    carts = Cart.objects().to_json()
+    print("carts: " + str(carts))
+
+    cartItems = CartItem.objects().to_json()
+    print("cartItems: " + str(cartItems))
+
     return "Test"
 
 if __name__ == "__main__":
