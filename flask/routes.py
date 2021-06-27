@@ -203,6 +203,8 @@ log_fail_retrieved_coupon = "Failed to retrieve coupon / no such coupon"
 log_delete_coupon_fail = "Failed to delete coupon / No such coupon"
 log_fail_retrieved_order = "Failed to retrieve order / no such order"
 log_fail_delete_order =  "Failed to delete order / No such order"
+log_available_list_coupons = "The following are the available list coupons"
+log_available_list_offers = "The following are the available list offers"
 
 """
 -----
@@ -824,7 +826,7 @@ Voice Assistant - EN
 -----
 Retrieve Data based on wht is requested from the Voice Assistant
 """
-# to test
+# to test, to implement
 @app.route('/voicebot/en', methods=["POST"])
 @cross_origin(origin='*')
 def voiceassist_en():
@@ -837,7 +839,9 @@ def voiceassist_en():
         if file.filename == "":
             return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
         
+        # hari: list coupons
         if file:
+            userId=request.form["userId"]
             # Speech Recognition Stuff.
             recognizer = sr.Recognizer()
             audio_file = sr.AudioFile(file)
@@ -846,7 +850,67 @@ def voiceassist_en():
             # line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
             line = recognizer.recognize_sphinx(audio_data, language="en-US")
 
-            if ("coupon" in line) or ("coupons" in line):
+            if("list coupons" in line):
+                # List all coupons according to user usage
+                userId = request.form['userId']
+                isCartThere = False
+                isUserCouponListThere = False
+                couponIdFromCart = 0
+                adjustedCoupons1 = []
+
+                allCoupons = json.loads(Coupon.objects().to_json())
+                # print("allCoupons: " + str(allCoupons))
+
+                # Retreive user's cart
+                try:
+                    cart = json.loads(Cart.objects(user_id=userId).first().to_json())
+                    isCartThere = True
+                    couponIdFromCart = cart["coupon_id"]
+                    # print("cart: " + str(cart))
+                    # print("couponIdFromCart: " + str(couponIdFromCart) + " available in cart")
+                except:
+                    isCartThere = False
+
+                # Retreive user's used coupons
+                try:
+                    userCouponList = json.loads(UserCoupon.objects(user_id=userId).to_json())
+                    # print("userCouponList: " + str(userCouponList))
+                    isUserCouponListThere = True
+                except:
+                    isUserCouponListThere = False
+
+                if(isCartThere):
+                    for coupon in allCoupons:
+                        if(coupon["_id"] != couponIdFromCart):
+                            adjustedCoupons1.append(coupon)
+                else:
+                    adjustedCoupons1 = allCoupons
+
+                if(isUserCouponListThere):
+                    for coupon in adjustedCoupons1:
+                        for userCoupon in userCouponList:
+                            if(coupon["_id"] == userCoupon["coupon_id"]):
+                                # print("coupon id: " + str(userCoupon["coupon_id"]) + " already used")
+                                adjustedCoupons1.remove(coupon)  
+
+                return jsonify({"result":True,"msg":log_available_list_coupons,"flag":"list-coupon-success","listCoupons":adjustedCoupons1})  
+            elif ("list offers" in line):
+                # List all offers
+                items = json.loads(Item.objects().to_json())
+                for item in items:
+                    if(item["item_offer_price"] == 0 or item["item_offer_price"] == None):
+                        items.remove(item)
+
+                return jsonify({"result":True,"msg":log_available_list_offers,"flag":"list-offer-success","listOffers":items})  
+            elif ("add coupon to cart" in line):
+                # add coupon to cart
+                couponId = request.form['couponId']
+                userId = request.form['userId']
+                coupon = Coupon.objects(coupon_id=couponId).first()
+                cart = Cart.objects(user_id=userId).first()
+                cart.update(coupon_id=coupon["coupon_id"], coupon_value=coupon["coupon_value"])
+
+            elif ("coupon" in line) or ("coupons" in line):
                 # Retrieve All Coupons - Check usercoupon for each coupon to ensure that it is not used
                 user_id=request.form["userId"]
                 coupons = Coupon.objects().to_json()
@@ -1265,8 +1329,9 @@ def new_item():
     item_stock = request.form['item_stock']
     item_rate = request.form['item_rate']
     item_unit = request.form['item_unit']
+    item_offer_price = request.form['item_offer_price']
 
-    new_item = Item(category_id=category_id, item_code=item_code, shop_id=shop_id, item_name=item_name, item_stock=item_stock, item_price=item_rate, item_unit=item_unit).save()
+    new_item = Item(item_offer_price=item_offer_price, category_id=category_id, item_code=item_code, shop_id=shop_id, item_name=item_name, item_stock=item_stock, item_price=item_rate, item_unit=item_unit).save()
     return jsonify({"result":True,"msg":log_create_new_item})
 
 # done test
@@ -1339,7 +1404,7 @@ def get_all_orders():
 def get_order(order_id):
     """Retrieve a Order given the ID of the Order"""
     try:
-        order = Order.objects().first().to_json()
+        order = Order.objects(order_id=order_id).first().to_json()
         return jsonify({"result":True,"msg":log_success_retrieved_order,"data":order})
     except:
         return jsonify({"result":False,"msg":log_fail_retrieved_order,"data":None})
@@ -1357,13 +1422,103 @@ def delete_order(order_id):
 
 """
 ------
+Usercoupon
+------
+"""
+# done test
+@app.route('/usercoupons',methods=['GET'])
+def get_all_usercoupons():
+    """Retrieve all Usercoupons from our database."""
+    usercoupons = UserCoupon.objects().to_json()
+    return jsonify({"result":True,"msg":log_success_retrieved_all_categories,"data":usercoupons})
+
+# done test
+@app.route('/usercoupon/<int:usercoupon_id>', methods=['GET'])
+def get_usercoupon(usercoupon_id):
+    """Retrieve a Usercoupon given the ID of the Usercoupon"""
+    try:
+        usercoupon = UserCoupon.objects(id=usercoupon_id).first().to_json()
+        return jsonify({"result":True,"msg":log_success_retrieved_category,"data":usercoupon})
+    except:
+        return jsonify({"result":False,"msg":log_fail_retrieved_category,"data":None})
+
+# done test
+@app.route('/usercoupon',methods=['POST'])
+def new_usercoupon():
+    """ Add New Usercoupon to Our Database."""
+    user_id = request.form['user_id']
+    coupon_id = request.form['coupon_id']
+    coupon_value = request.form['coupon_value']
+    coupon_available = request.form['coupon_available']
+
+    new_usercoupon = UserCoupon(user_id=user_id, coupon_id=coupon_id, coupon_value=coupon_value, coupon_available=coupon_available).save()
+    return jsonify({"result":True,"msg":log_create_new_category})
+
+# done test
+@app.route('/usercoupon/<int:usercoupon_id>', methods=['DELETE'])
+def delete_usercoupon(usercoupon_id):
+    """Delete a usercoupon given the ID of the usercoupon"""
+    try:
+        usercoupon = UserCoupon.objects(id=usercoupon_id).first()
+        usercoupon.delete()
+        return jsonify({"result":True,"msg":log_delete_category})
+    except:
+        return jsonify({"result":False,"msg":log_delete_category_Fail})
+
+"""
+------
+Cart
+------
+"""
+# done test
+@app.route('/carts',methods=['GET'])
+def get_all_carts():
+    """Retrieve all cart from our database."""
+    carts = Cart.objects().to_json()
+    return jsonify({"result":True,"msg":log_success_retrieved_all_categories,"data":carts})
+
+# done test
+@app.route('/cart/<int:cart_id>', methods=['GET'])
+def get_cart(cart_id):
+    """Retrieve a cart given the ID of the cart"""
+    try:
+        cart = Cart.objects(cart_id=cart_id).first().to_json()
+        return jsonify({"result":True,"msg":log_success_retrieved_category,"data":cart})
+    except:
+        return jsonify({"result":False,"msg":log_fail_retrieved_category,"data":None})
+
+# done test
+@app.route('/cart',methods=['POST'])
+def new_cart():
+    """ Add New cart to Our Database."""
+    shop_id = request.form['shop_id']
+    user_id = request.form['user_id']
+    coupon_id = request.form['coupon_id']
+    coupon_value = request.form['coupon_value']
+    
+    new_cart = Cart(shop_id=shop_id, user_id=user_id, coupon_id=coupon_id, coupon_value=coupon_value).save()
+    return jsonify({"result":True,"msg":log_create_new_category})
+
+# done test
+@app.route('/cart/<int:cart_id>', methods=['DELETE'])
+def delete_cart(cart_id):
+    """Delete a cart given the ID of the cart"""
+    try:
+        cart = Cart.objects(cart_id=cart_id).first()
+        cart.delete()
+        return jsonify({"result":True,"msg":log_delete_category})
+    except:
+        return jsonify({"result":False,"msg":log_delete_category_Fail})
+
+"""
+------
 TEST
 ------
 """
 # done test
 @app.route('/test',methods=['GET'])
 def test_function():
-    return "Test"
-
+    return "true"
+    
 if __name__ == "__main__":
     app.run(debug=True, threaded=True)

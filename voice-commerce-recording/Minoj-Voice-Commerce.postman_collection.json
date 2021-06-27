@@ -1,0 +1,918 @@
+{
+	"info": {
+		"_postman_id": "7bf33ffe-ce7a-4134-96a7-e925d88dfe95",
+		"name": "Minoj-Voice-Commerce",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "order",
+			"item": [
+				{
+					"name": "http://localhost:5000/orders",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5000/orders",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"orders"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:5000/order/1",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5000/order/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"order",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:5000/order/1",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5000/order/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"order",
+								"1"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "shop",
+			"item": [
+				{
+					"name": "http://localhost:5000/shops",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5000/shops",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"shops"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:5000/shop",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "shop_name",
+									"value": "test-shop-3",
+									"type": "text"
+								},
+								{
+									"key": "shop_phone",
+									"value": "0776318138",
+									"type": "text"
+								},
+								{
+									"key": "shop_address",
+									"value": "ADDRESS-3",
+									"type": "text"
+								},
+								{
+									"key": "shop_email",
+									"value": "shop3@gmail.com",
+									"type": "text"
+								},
+								{
+									"key": "shop_lat",
+									"value": "0.1",
+									"type": "text"
+								},
+								{
+									"key": "shop_long",
+									"value": "0.2",
+									"type": "text"
+								},
+								{
+									"key": "shop_available",
+									"value": "1",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "http://localhost:5000/shop",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"shop"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:5000/shop/4",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5000/shop/4",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"shop",
+								"4"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:5000/shop/1",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5000/shop/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"shop",
+								"1"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "user",
+			"item": [
+				{
+					"name": "http://localhost:5000/users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5000/users",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"users"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:5000/user",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "user_name",
+									"value": "hari",
+									"type": "text"
+								},
+								{
+									"key": "user_phone",
+									"value": "07763181366",
+									"type": "text"
+								},
+								{
+									"key": "user_email",
+									"value": "hari@gmail.com",
+									"type": "text"
+								},
+								{
+									"key": "user_lat",
+									"value": "1",
+									"type": "text"
+								},
+								{
+									"key": "user_address",
+									"value": "address1",
+									"type": "text"
+								},
+								{
+									"key": "user_long",
+									"value": "2",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "http://localhost:5000/user",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"user"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:5000/user/2",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5000/user/5",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"user",
+								"5"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:5000/user/2",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5000/user/2",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"user",
+								"2"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "register",
+			"item": [
+				{
+					"name": "http://localhost:5000/register",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "flag",
+									"value": "name",
+									"type": "text"
+								},
+								{
+									"key": "audioFile",
+									"type": "file",
+									"src": "/C:/Users/Zincat User/Downloads/voice-commerce-recording/banana five kilograms.wav"
+								}
+							]
+						},
+						"url": {
+							"raw": "http://localhost:5000/register",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:5000/register",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "flag",
+									"value": "save",
+									"type": "text"
+								},
+								{
+									"key": "name",
+									"value": "peter",
+									"type": "text"
+								},
+								{
+									"key": "email",
+									"value": "peter@gmail.com",
+									"type": "text"
+								},
+								{
+									"key": "phone",
+									"value": "0776318136",
+									"type": "text"
+								},
+								{
+									"key": "address",
+									"value": "ADDRESS",
+									"type": "text"
+								},
+								{
+									"key": "latitude",
+									"value": "1.5",
+									"type": "text"
+								},
+								{
+									"key": "longitude",
+									"value": "2.5",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "http://localhost:5000/register",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"register"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "category",
+			"item": [
+				{
+					"name": "http://localhost:5000/category",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "category_name",
+									"value": "fruits",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "http://localhost:5000/category",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"category"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:5000/categories",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5000/categories",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"categories"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:5000/category/1",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5000/category/2",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"category",
+								"2"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:5000/category/1",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5000/category/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"category",
+								"1"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "item",
+			"item": [
+				{
+					"name": "http://localhost:5000/items",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5000/items",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"items"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:5000/item",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "category_id",
+									"value": "2",
+									"type": "text"
+								},
+								{
+									"key": "item_code",
+									"value": "itm_002",
+									"type": "text"
+								},
+								{
+									"key": "shop_id",
+									"value": "3",
+									"type": "text"
+								},
+								{
+									"key": "item_name",
+									"value": "banana",
+									"type": "text"
+								},
+								{
+									"key": "item_stock",
+									"value": "1000",
+									"type": "text"
+								},
+								{
+									"key": "item_rate",
+									"value": "110",
+									"type": "text"
+								},
+								{
+									"key": "item_unit",
+									"value": "kg",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "http://localhost:5000/item",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"item"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:5000/item/5",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5000/item/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"item",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:5000/item/1",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5000/item/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"item",
+								"1"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "coupons",
+			"item": [
+				{
+					"name": "http://localhost:5000/coupon",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "shop_id",
+									"value": "3",
+									"type": "text"
+								},
+								{
+									"key": "coupon_value",
+									"value": "200",
+									"type": "text"
+								},
+								{
+									"key": "coupon_available",
+									"value": "1",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "http://localhost:5000/coupon",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"coupon"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:5000/coupon/3",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5000/coupon/3",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"coupon",
+								"3"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:5000/coupons",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5000/coupons",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"coupons"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:5000/coupon/4",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5000/coupon/4",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"coupon",
+								"4"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Language Picker - English or Tamil",
+			"item": [
+				{
+					"name": "http://localhost:5000/language",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "audioFile",
+									"type": "file",
+									"src": "/C:/Users/Zincat User/Downloads/voice-commerce-recording/english.wav"
+								}
+							]
+						},
+						"url": {
+							"raw": "http://localhost:5000/language",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"language"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Navigation - English",
+			"item": [
+				{
+					"name": "http://localhost:5000/navigation/en",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "audioFile",
+									"type": "file",
+									"src": "/C:/Users/Zincat User/Downloads/voice-commerce-recording/name.wav"
+								}
+							]
+						},
+						"url": {
+							"raw": "http://localhost:5000/navigation/en",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"navigation",
+								"en"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "voice search english",
+			"item": [
+				{
+					"name": "http://localhost:5000/voicesearch/en",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "audioFile",
+									"type": "file",
+									"src": "/C:/Users/Zincat User/Downloads/voice-commerce-recording/banana five kilograms.wav"
+								}
+							]
+						},
+						"url": {
+							"raw": "http://localhost:5000/voicesearch/en",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"voicesearch",
+								"en"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:5000//speech/en",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "audioFile",
+									"type": "file",
+									"src": "/C:/Users/Zincat User/Downloads/voice-commerce-recording/banana five kilograms.wav"
+								}
+							]
+						},
+						"url": {
+							"raw": "http://localhost:5000//speech/en",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"",
+								"speech",
+								"en"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "speech-to-text",
+			"item": []
+		},
+		{
+			"name": "Test URL",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:5000/Test",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"Test"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "http://localhost:5000/example",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "audioFile",
+							"type": "file",
+							"src": "/C:/Users/Zincat User/Downloads/voice-commerce-recording/banana five kilograms.wav"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:5000/example",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"example"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
