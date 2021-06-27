@@ -205,6 +205,12 @@ log_fail_retrieved_order = "Failed to retrieve order / no such order"
 log_fail_delete_order =  "Failed to delete order / No such order"
 log_available_list_coupons = "The following are the available list coupons"
 log_available_list_offers = "The following are the available list offers"
+log_success_order_cancelled = "Order cancellation successful"
+log_fail_order_cancelled = "Order cancellation failed"
+log_success_order_completed = "Order completed successful"
+log_fail_order_completed = "Order completed failed"
+log_success_order_returned = "Order returned successful"
+log_fail_order_returned = "Order returned failed"
 
 """
 -----
@@ -894,6 +900,63 @@ def voiceassist_en():
                                 adjustedCoupons1.remove(coupon)  
 
                 return jsonify({"result":True,"msg":log_available_list_coupons,"flag":"list-coupon-success","listCoupons":adjustedCoupons1})  
+            elif ("complete order" in line):
+                # complete order
+                orderId = request.form['orderId']
+                reviewReason = request.form['reviewReason']
+
+                order = Order.objects(order_id=orderId).first()
+                # print("Order: " + str(order))
+
+                if(order["order_status"] == 0):
+                    # order in processing stage.
+                    try:
+                        order.update(order_status=1, review_reason=reviewReason)
+                        return jsonify({"result":True,"msg":log_success_order_completed, "flag":"success order completed"})
+                    except:
+                        return jsonify({"result":True,"msg":log_fail_order_completed, "flag":"failed to complete order"})
+                else:
+                    # order not in processing stage.
+                    return jsonify({"result":False,"msg":log_fail_order_completed, "flag":"failed to complete order"})
+
+            elif ("cancel order" in line):
+                # cancel order
+                orderId = request.form['orderId']
+                cancelReason = request.form['cancelReason']
+
+                order = Order.objects(order_id=orderId).first()
+                # print("Order: " + str(order))
+
+                if(order["order_status"] == 0):
+                    # order in processing stage.
+                    try:
+                        order.update(order_status=2, cancel_reason=cancelReason)
+                        return jsonify({"result":True,"msg":log_success_order_cancelled, "flag":"success order cancelled"})
+                    except:
+                        return jsonify({"result":True,"msg":log_fail_order_cancelled, "flag":"failed to cancel order"})
+                else:
+                    # order not in processing stage.
+                    return jsonify({"result":False,"msg":log_fail_order_cancelled, "flag":"failed to cancel order"})
+
+            elif ("return order" in line):
+                # return order
+                orderId = request.form['orderId']
+                returnReason = request.form['returnReason']
+
+                order = Order.objects(order_id=orderId).first()
+                print("Order: " + str(order))
+
+                if(order["order_status"] == 1):
+                    # order in completed stage.
+                    try:
+                        order.update(order_status=3, return_reason=returnReason)
+                        return jsonify({"result":True,"msg":log_success_order_returned, "flag":"success order returned"})
+                    except:
+                        return jsonify({"result":True,"msg":log_fail_order_returned, "flag":"failed to return order"})
+                else:
+                    # order not in completed stage.
+                    return jsonify({"result":False,"msg":log_fail_order_returned, "flag":"failed to return order"})
+
             elif ("list offers" in line):
                 # List all offers
                 items = json.loads(Item.objects().to_json())
@@ -1420,6 +1483,18 @@ def delete_order(order_id):
     except:
         return jsonify({"result":False,"msg":log_fail_delete_order})
 
+# done test
+@app.route('/order',methods=['POST'])
+def new_order():
+    """ Add New order to Our Database."""
+    shop_id = request.form['shop_id']
+    user_id = request.form['user_id']
+    coupon_id = request.form['coupon_id']
+    coupon_value = request.form['coupon_value']
+
+    new_order = Order(shop_id=shop_id, user_id=user_id, coupon_id=coupon_id, coupon_value=coupon_value).save()
+    return jsonify({"result":True,"msg":log_create_new_category})
+
 """
 ------
 Usercoupon
@@ -1519,6 +1594,7 @@ TEST
 @app.route('/test',methods=['GET'])
 def test_function():
     return "true"
+
     
 if __name__ == "__main__":
     app.run(debug=True, threaded=True)
