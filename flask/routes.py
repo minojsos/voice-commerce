@@ -459,9 +459,28 @@ def ocr_checkout():
         # Read Each Item
         print("Reading")
         data = request.json['data']
-        userId = request.json['userId']
+        user_id = request.json['userId']
+        # Move Cart to Order and Cart Item to Order Item        
+        # Place the Order by Moving the Cart to the Order and CartItem to OrderItem
+        # Empty the Cart
+        cart = Cart.objects(user_id=user_id).first().to_json()
+        cartitems = CartItem.objects(cart_id=cart["cart_id"])
 
-        # Calculate Total
+        # Iterate Each item in the Cart and Save it to CarItem
+        order = Order().save().to_json()
+        for item in cartitems:
+            item = item.to_json()
+            OrderItem(order_id=order["order_id"],item_id=item["item_id"],item_name=item["item_name"],item_code=item["item_code"],item_rate=item["item_rate"],item_offer_price=item["item_offer_price"],item_qty=item["item_qty"]).save()
+            
+        # delete all items from the Cart
+        # remove cart and cartitem
+        cart = Cart.objects(cart_id= cart['cart_id']).first()
+        cartitems = CartItem.objects(cart_id=cart['cart_id'])
+
+        cartitems.delete()
+        cart.delete()
+        
+        return jsonify({"result":True,"msg":log_order_placed_success})
 
 """
 Place Order
@@ -473,7 +492,6 @@ def ocr_placeorder():
     if request.method == "POST":
         print("Reading")
         user_id = request.json['userId']
-        # Move Cart to Order and Cart Item to Order Item
         # Get the user's address and total amount to be paid - Total of All Items
         # coupons - Hari
         # offer - Hari
@@ -1004,6 +1022,11 @@ def voicesearch_en():
                     
                 # delete all items from the Cart
                 # remove cart and cartitem
+                cart = Cart.objects(cart_id= cart['cart_id']).first()
+                cartitems = CartItem.objects(cart_id=cart['cart_id'])
+
+                cartitems.delete()
+                cart.delete()
                 
                 return jsonify({"result":True,"msg":log_order_placed_success})
             elif "cancelorder" in line:
