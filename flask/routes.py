@@ -362,14 +362,14 @@ def ocr_search():
                 # Check if Quantity Available in Cart
                 if (item_json["item_stock"] >= itm['itemqty']):
                     # Stock Available
-                    allitems[idx] = {"item_name":itm['itemname'],"item_qty":itm['itemqty'],"available":True}
+                    allitems[idx] = {"item_name":itm['itemname'],"item_qty":itm['itemqty'],"item_price":item_json['item_price'],"item_offer_price":item_json['item_offer_price'],"available":True}
                 else:
                     allitems[idx] = {"item_name":itm['itemname'],"item_qty":itm['itemqty'],"available":False}
             else:
                 allitems[idx] = {"item_name":itm['itemname'],"item_qty":itm['itemqty'],"available":False}
             idx=idx+1
 
-        return jsonify({"result":True,"msg":"Successfully searched items","list":allitems})
+        return jsonify({"result":True,"msg":"Successfully searched items","list":allitems,"flag":"ocr-success"})
     else:
         return jsonify({"result":False,"msg":log_invalid_method,"list":None})
 
@@ -413,10 +413,10 @@ def ocr_addcart():
                                 # Stock Available
                                 # Add to Cart and Send Response Back to User
                                 CartItem(cart_id=cart["cart_id"], item_id=item_jsn["item_id"], item_name=item_jsn["item_name"], item_code=item_jsn["item_code"], item_rate=item_jsn["item_rate"], item_offer_price=item_jsn["item_offer_price"], item_qty=item_qty).save() # Save the Item to the Cart
-                                return jsonify({"result":True,"msg":log_item_with_name + item_name + " and Quantity " + item_qty + " has been successfully added to your Cart!","flag":"search-success"})
+                                return jsonify({"result":True,"msg":log_item_with_name + item_name + " and Quantity " + item_qty + " has been successfully added to your Cart!","flag":"ocr-success"})
                             
                             else:
-                                return jsonify({"result":False,"msg":log_item_with_name + item_name + " has only " + str(item_jsn["item_stock"]) + " " + item_jsn["item_unit"] + "!","flag":"search-error"})
+                                return jsonify({"result":False,"msg":log_item_with_name + item_name + " has only " + str(item_jsn["item_stock"]) + " " + item_jsn["item_unit"] + "!","flag":"ocr-error"})
                         else:
                             # Item Already in Cart. So Update the Existing
                             cartitm_item_qty = cartitem.to_json()["item_qty"]
@@ -427,7 +427,7 @@ def ocr_addcart():
                             
                             else:
                                 # Stock Not Available
-                                return jsonify({"result":False,"msg":log_item_with_name + item_name + " has only " + str(item_jsn["item_stock"]) + " " + item_jsn["item_unit"] + "!", "flag":"search-error"})
+                                return jsonify({"result":False,"msg":log_item_with_name + item_name + " has only " + str(item_jsn["item_stock"]) + " " + item_jsn["item_unit"] + "!", "flag":"ocr-error"})
 
                     else:
                         # New Cart - No need to check if Item is in cart already
@@ -439,14 +439,81 @@ def ocr_addcart():
                             cart = Cart(user_id=request.form["userId"]).save() # Create New Cart and get the Cart Object
                             CartItem(cart_id=cart.cart_id, item_id=item_jsn["item_id"], item_name=item_jsn["item_name"], item_code=item_jsn["item_code"], item_rate=item_jsn["item_rate"], item_offer_price=item_jsn["item_offer_price"], item_qty=item_qty).save() # Save the Item to the Cart
 
-                            return jsonify({"result":True,"msg":log_item_with_name + item_name + " and Quantity " + item_qty + " has been successfully added to your Cart!", "flag":"search-success"})
+                            return jsonify({"result":True,"msg":log_item_with_name + item_name + " and Quantity " + item_qty + " has been successfully added to your Cart!", "flag":"ocr-success"})
                         
                         else:
-                            return jsonify({"result":False,"msg":log_item_with_name + item_name + " has only " + str(item_jsn["item_stock"]) + " " + item_jsn["item_unit"] + "!","flag":"search-error"})
+                            return jsonify({"result":False,"msg":log_item_with_name + item_name + " has only " + str(item_jsn["item_stock"]) + " " + item_jsn["item_unit"] + "!","flag":"ocr-error"})
 
         return jsonify({"result":True,"msg":"Successfully added items to cart"})
     else:
         return jsonify({"result":False,"msg":log_invalid_method})
+
+"""
+Checkout
+--------
+
+"""
+@app.route('/ocr/checkout', methods=['POST'])
+def ocr_checkout():
+    if request.method == "POST":
+        # Read Each Item
+        print("Reading")
+        data = request.json['data']
+        userId = request.json['userId']
+
+        # Calculate Total
+
+"""
+Place Order
+-----------
+
+"""
+@app.route('/ocr/placeorder', methods=['POST'])
+def ocr_placeorder():
+    if request.method == "POST":
+        print("Reading")
+        user_id = request.json['userId']
+        # Move Cart to Order and Cart Item to Order Item
+        # Get the user's address and total amount to be paid - Total of All Items
+        # coupons - Hari
+        # offer - Hari
+        cart = Cart.objects(user_id=user_id).first().to_json()
+        cartitems = CartItem.objects(cart_id=cart["cart_id"])
+        user = User.objects(user_id=user_id).first().to_json()
+
+        couponValue = 0
+        if(cart["coupon_value"] != None or cart["coupon_value"] > 0):
+            couponValue = cart["coupon_value"]
+
+        totalValue = 0
+        for cartitemObj in cartitems:
+            if(cartitemObj["item_offer_price"] != None or cartitemObj["item_offer_price"] > 0):
+                totalValue = totalValue + cartitemObj["item_offer_price"]
+            else:
+                totalValue = totalValue + cartitemObj["item_rate"]
+
+        total = totalValue - couponValue
+
+        return jsonify({"result":True,"msg":log_order_can_be_placed,"address":user["user_address"],"total":total,"payment":"Cash On Delivery"})
+
+"""
+Cancel Checkout
+---------------
+
+"""
+@app.route('/ocr/cancel', methods=['POST'])
+def ocr_cancel():
+    if request.method == "POST":
+        print("Reading")
+        userId = request.json['userId']
+        # Remove All Items from Cart
+        cart = Cart.objects(user_id=userId).first()
+        cartitems = CartItem.objects(cart_id=cart['cart_id'])
+        cartitems.delete()
+        cart.delete()
+
+        return jsonify({"result":True,"msg":"Successfully Emptied Cart","flag":"ocr-cart-empty"})
+
 
 # repeat - Hari
 # constant - Hari
@@ -939,6 +1006,17 @@ def voicesearch_en():
                 # remove cart and cartitem
                 
                 return jsonify({"result":True,"msg":log_order_placed_success})
+            elif "cancelorder" in line:
+                # Cancel the Placed Order by Removing all items from the Cart
+                # Empty the Cart
+                user_id = request.form["userId"]
+                cart = Cart.objects(user_id=user_id).first()
+                cartitems = CartItem.objects(cart_id=cart["cart_id"])
+
+                cartitems.delete() # Delete the Cart
+                cart.delete() # Delete Cart
+
+                return jsonify({"result":True,"msg":"Successfully Cancelled Order","flag":"cancel-order"})
             else:
                 return jsonify({"result":False,"msg":log_invalid_audio_cmd,"flag":"search-error"})
         
