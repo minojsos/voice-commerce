@@ -18,6 +18,7 @@ class Order(db.Document):
     cancel_reason = db.StringField(required=False, default="")
     return_reason = db.StringField(required=False, default="")
     review_reason = db.StringField(required=False, default="")
+    address = db.StringField(required=True)
     order_created_on = db.DateTimeField(default=datetime.datetime.utcnow, required=True)
     order_updated_on = db.DateTimeField(default=None)
 
