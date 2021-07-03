@@ -357,7 +357,7 @@ def ocr_search():
             # Return as an array of objects
             item = Item.objects(item_name=itm['itemname']).first()
             if (item != None):
-                item_jsn = item.to_json() # Convert it to JSON
+                item_jsn = json.loads(item.to_json()) # Convert it to JSON
         
                 # Check if Quantity Available in Cart
                 if (item_json["item_stock"] >= itm['itemqty']):
@@ -399,13 +399,13 @@ def ocr_addcart():
                 print(itm)
                 if (itm['available'] == True):
                     item = Item.objects(item_name=itm['itemname']).first()                    
-                    item_jsn = item.to_json() # Convert it to JSON
+                    item_jsn = json.loads(item.to_json()) # Convert it to JSON
 
                     # Check if item is already in cart - then edit. Else New Item
                     cart = Cart.objects(user_id=userId).first().to_json()
                     if cart is not None:
                         # Cart Already Exists - Check if item is in Cart Alrady
-                        cartitem = CartItem(cart_id=cart["cart_id"],item_id=item_jsn["item_id"])
+                        cartitem = CartItem.objects(cart_id=cart["cart_id"],item_id=item_jsn["item_id"]).first()
                         if (cartitem is None):
                             
                             # If Item is not in 
@@ -419,7 +419,7 @@ def ocr_addcart():
                                 return jsonify({"result":False,"msg":log_item_with_name + item_name + " has only " + str(item_jsn["item_stock"]) + " " + item_jsn["item_unit"] + "!","flag":"ocr-error"})
                         else:
                             # Item Already in Cart. So Update the Existing
-                            cartitm_item_qty = cartitem.to_json()["item_qty"]
+                            cartitm_item_qty = json.loads(cartitem.to_json())["item_qty"]
                             if (item_jsn["item_stock"] >= (cartitm_item_qty + item_qty)):
                                 # Stock Available
                                 cartitem.update(item_qty=(cartitm_item_qty+item_qty))
@@ -463,13 +463,13 @@ def ocr_checkout():
         # Move Cart to Order and Cart Item to Order Item        
         # Place the Order by Moving the Cart to the Order and CartItem to OrderItem
         # Empty the Cart
-        cart = Cart.objects(user_id=user_id).first().to_json()
+        cart = json.loads(Cart.objects(user_id=user_id).first().to_json())
         cartitems = CartItem.objects(cart_id=cart["cart_id"])
 
         # Iterate Each item in the Cart and Save it to CarItem
         order = Order().save().to_json()
         for item in cartitems:
-            item = item.to_json()
+            item = json.loads(item.to_json())
             OrderItem(order_id=order["order_id"],item_id=item["item_id"],item_name=item["item_name"],item_code=item["item_code"],item_rate=item["item_rate"],item_offer_price=item["item_offer_price"],item_qty=item["item_qty"]).save()
             
         # delete all items from the Cart
@@ -572,10 +572,10 @@ def register_user():
                 with audio_file as source:
                     audio_data = recognizer.record(source)
                 
-                line = recognizer.recognize_sphinx(audio_data, language="en-US")
+                # line = recognizer.recognize_sphinx(audio_data, language="en-US")
 
                 # If empty send an error - Hari
-                # line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
+                line = recognizer.recognize_google(audio_data, key="AIzaSyAkni5khBB5CSXPnJNO6qAts3XQCc_eYY4", language="en-IN")
 
                 if((line == "" or line == None) and flag.lower() != "save"):
                     return jsonify({"result":False,"msg":log_invalid_audio_cmd,"flag":"invalid register-process","data":""})
@@ -646,8 +646,8 @@ def login_user():
             audio_file = sr.AudioFile(file)
             with audio_file as source:
                 audio_data = recognizer.record(source)
-            # line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
-            line = recognizer.recognize_sphinx(audio_data, language="en-US")
+            # line = recognizer.recognize_sphinx(audio_data, language="en-US")
+            line = recognizer.recognize_google(audio_data, key="AIzaSyAkni5khBB5CSXPnJNO6qAts3XQCc_eYY4", language="en-IN")
             line=line.replace('at','@')
             line=line.replace('dot','.')
             line=line.replace(' ', '')
@@ -686,8 +686,8 @@ def language_picker():
             audio_file = sr.AudioFile(file)
             with audio_file as source:
                 audio_data = recognizer.record(source)
-            # line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
-            line = recognizer.recognize_sphinx(audio_data, language="en-US")
+            # line = recognizer.recognize_sphinx(audio_data, language="en-US")
+            line = recognizer.recognize_google(audio_data, key="AIzaSyAkni5khBB5CSXPnJNO6qAts3XQCc_eYY4", language="en-IN")
 
             if ("english" in line) and ("tamil" not in line):
                 return jsonify({"result":False,"msg":log_chosen_english,"flag":"language-success","language":"english"})
@@ -728,8 +728,8 @@ def navigation_en():
             audio_file = sr.AudioFile(file)
             with audio_file as source:
                 audio_data = recognizer.record(source)
-            # line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
-            line = recognizer.recognize_sphinx(audio_data, language="en-US")
+            # line = recognizer.recognize_sphinx(audio_data, language="en-US")
+            line = recognizer.recognize_google(audio_data, key="AIzaSyAkni5khBB5CSXPnJNO6qAts3XQCc_eYY4", language="en-IN")
 
             if "voice search" in line:
                 return jsonify({"result":True,"msg":log_chosen_voice_search,"flag":"voice-search"})
@@ -810,8 +810,8 @@ def voicesearch_en():
             audio_file = sr.AudioFile(file)
             with audio_file as source:
                 audio_data = recognizer.record(source)
-            # line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
-            line = recognizer.recognize_sphinx(audio_data, language="en-US")
+            # line = recognizer.recognize_sphinx(audio_data, language="en-US")
+            line = recognizer.recognize_google(audio_data, key="AIzaSyAkni5khBB5CSXPnJNO6qAts3XQCc_eYY4", language="en-IN")
 
             # We Search Based on the Item Name in the Audio - Expected Audio Format: Item [Item Name] [Qty] [Unit] - Item Rice 2KG
             if "item" in line:
@@ -1125,8 +1125,8 @@ def voiceassist_en():
             audio_file = sr.AudioFile(file)
             with audio_file as source:
                 audio_data = recognizer.record(source)
-            # line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
-            line = recognizer.recognize_sphinx(audio_data, language="en-US")
+            # line = recognizer.recognize_sphinx(audio_data, language="en-US")
+            line = recognizer.recognize_google(audio_data, key="AIzaSyAkni5khBB5CSXPnJNO6qAts3XQCc_eYY4", language="en-IN")
 
             if("list coupons" in line):
                 # List all coupons according to user usage
@@ -1325,8 +1325,8 @@ def example_audio():
             audio_file = sr.AudioFile(file)
             with audio_file as source:
                 audio_data = recognizer.record(source)
-            # line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
-            line = recognizer.recognize_sphinx(audio_data, language="en-US")
+            # line = recognizer.recognize_sphinx(audio_data, language="en-US")
+            line = recognizer.recognize_google(audio_data, key="AIzaSyAkni5khBB5CSXPnJNO6qAts3XQCc_eYY4", language="en-IN")
 
             print(line)
             return jsonify({"result":True,"msg":log_success_converted_audio_2_text,"data":line})
@@ -1362,8 +1362,8 @@ def speech_to_text_en():
             audio_file = sr.AudioFile(file)
             with audio_file as source:
                 audio_data = recognizer.record(source)
-            # extra_line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="en-US")
-            extra_line = recognizer.recognize_sphinx(audio_data, language="en-US")
+            # extra_line = recognizer.recognize_sphinx(audio_data, language="en-US")
+            extra_line = recognizer.recognize_google(audio_data, key="AIzaSyAkni5khBB5CSXPnJNO6qAts3XQCc_eYY4", language="en-IN")
 
             # Saving the file.
             filename = secure_filename(file.filename)
