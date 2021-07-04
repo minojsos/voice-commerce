@@ -58,12 +58,6 @@ CORS(app)
 if __name__ == "__main__":
     app.run(debug=True, threaded=True)
 
-#for downloading package files can be commented after First run
-nltk.download('popular', quiet=True)
-nltk.download('nps_chat',quiet=True)
-nltk.download('punkt') 
-nltk.download('wordnet')
-
 # You have 50 free calls per day, after that you have to register somewhere
 # around here probably https://cloud.google.com/speech-to-text/
 GOOGLE_SPEECH_API_KEY = 'AIzaSyADxOB7Npq1-Q5cj5A2Zm-oKRIrzjnIbe0'
@@ -575,7 +569,7 @@ def register_user():
                 # line = recognizer.recognize_sphinx(audio_data, language="en-US")
 
                 # If empty send an error - Hari
-                line = recognizer.recognize_google(audio_data, key="AIzaSyAkni5khBB5CSXPnJNO6qAts3XQCc_eYY4", language="en-IN")
+                line = recognizer.recognize_google(audio_data, language="en-IN")
 
                 if((line == "" or line == None) and flag.lower() != "save"):
                     return jsonify({"result":False,"msg":log_invalid_audio_cmd,"flag":"invalid register-process","data":""})
@@ -647,7 +641,7 @@ def login_user():
             with audio_file as source:
                 audio_data = recognizer.record(source)
             # line = recognizer.recognize_sphinx(audio_data, language="en-US")
-            line = recognizer.recognize_google(audio_data, key="AIzaSyAkni5khBB5CSXPnJNO6qAts3XQCc_eYY4", language="en-IN")
+            line = recognizer.recognize_google(audio_data, language="en-IN")
             line=line.replace('at','@')
             line=line.replace('dot','.')
             line=line.replace(' ', '')
@@ -687,13 +681,15 @@ def language_picker():
             with audio_file as source:
                 audio_data = recognizer.record(source)
             # line = recognizer.recognize_sphinx(audio_data, language="en-US")
-            line = recognizer.recognize_google(audio_data, key="AIzaSyAkni5khBB5CSXPnJNO6qAts3XQCc_eYY4", language="en-IN")
+            line = recognizer.recognize_google(audio_data, language="en-IN")
 
-            if ("english" in line) and ("tamil" not in line):
+            print(line)
+
+            if ("english" in line.lower()) and ("tamil" not in line.lower()):
                 return jsonify({"result":False,"msg":log_chosen_english,"flag":"language-success","language":"english"})
-            elif ("english" not in line) and ("tamil" in line):
+            elif ("english" not in lower(line)) and ("tamil" in line.lower()):
                 return jsonify({"result":False,"msg":log_chosen_tamil,"flag":"language-success","language":"tamil"})
-            elif ("english" in line) and ("tamil" in line):
+            elif ("english" in line.lower()) and ("tamil" in line.lower()):
                 return jsonify({"result":False,"msg":log_chosen_invalid_lang,"flag":"language-error","language":"invalid"})
             else:
                 return jsonify({"result":False,"msg":log_chosen_invalid_lang,"flag":"language-error","language":"invalid"})
@@ -729,19 +725,20 @@ def navigation_en():
             with audio_file as source:
                 audio_data = recognizer.record(source)
             # line = recognizer.recognize_sphinx(audio_data, language="en-US")
-            line = recognizer.recognize_google(audio_data, key="AIzaSyAkni5khBB5CSXPnJNO6qAts3XQCc_eYY4", language="en-IN")
+            line = recognizer.recognize_google(audio_data, language="en-IN")
 
-            if "voice search" in line:
+            print(line)
+            if "voice search" in line.lower():
                 return jsonify({"result":True,"msg":log_chosen_voice_search,"flag":"voice-search"})
-            elif "product list search" in line:
+            elif "product list search" in line.lower():
                 return jsonify({"result":True,"msg":log_chosen_product_list_search,"flag":"create-list"})
-            elif "image search" in line:
+            elif "image search" in line.lower():
                 return jsonify({"result":True,"msg":log_chosen_image_search,"flag":"image-list"})
-            elif "profile" in line:
+            elif "profile" in line.lower():
                 return jsonify({"result":True,"msg":log_chosen_manage_profile,"flag":"profile"})
-            elif "orders" in line:
+            elif "orders" in line.lower():
                 return jsonify({"result":True,"msg":log_chosen_view_your_orders,"flag":"order"})
-            elif "assistant" in line:
+            elif "assistant" in line.lower():
                 return jsonify({"result":True,"msg":log_chosen_light_now_assistant,"flag":"assistant"})
             else:
                 return jsonify({"result":True,"msg":log_chosen_invalid_menu,"flag":"navigation-error"})
@@ -811,7 +808,9 @@ def voicesearch_en():
             with audio_file as source:
                 audio_data = recognizer.record(source)
             # line = recognizer.recognize_sphinx(audio_data, language="en-US")
-            line = recognizer.recognize_google(audio_data, key="AIzaSyAkni5khBB5CSXPnJNO6qAts3XQCc_eYY4", language="en-IN")
+            line = recognizer.recognize_google(audio_data, language="en-IN")
+            line = line.lower()
+            print(line)
 
             # We Search Based on the Item Name in the Audio - Expected Audio Format: Item [Item Name] [Qty] [Unit] - Item Rice 2KG
             if "item" in line:
@@ -915,28 +914,33 @@ def voicesearch_en():
                 # Check if the Item exists by the name
                 item = Item.objects(item_name=item_name).first()
                 if (item != None):
-                    item_jsn = item.to_json() # Convert it to JSON
+                    item_jsn = json.loads(item.to_json()) # Convert it to JSON
             
                     # Check if item is already in cart - then edit. Else New Item
-                    cart = Cart.objects(user_id=request.form["userId"]).first().to_json()
+                    cart = Cart.objects(user_id=request.form["userId"]).first()
                     if cart is not None:
-                        
+                        cart = json.loads(cart.to_json())
+
                         # Cart Already Exists - Check if item is in Cart Alrady
-                        cartitem = CartItem(cart_id=cart["cart_id"],item_id=item_jsn["item_id"])
+                        cartitem = CartItem(cart_id=cart["_id"],item_id=item_jsn["_id"])
+
+                        print("CART ITEM")
+                        print(cartitem.to_json())
+
                         if (cartitem is None):
                             
                             # If Item is not in 
                             if (item_jsn["item_stock"] >= item_qty):
                                 # Stock Available
                                 # Add to Cart and Send Response Back to User
-                                CartItem(cart_id=cart["cart_id"], item_id=item_jsn["item_id"], item_name=item_jsn["item_name"], item_code=item_jsn["item_code"], item_rate=item_jsn["item_rate"], item_offer_price=item_jsn["item_offer_price"], item_qty=item_qty).save() # Save the Item to the Cart
+                                CartItem(cart_id=cart["_id"], item_id=item_jsn["_id"], item_name=item_jsn["item_name"], item_code=item_jsn["item_code"], item_rate=item_jsn["item_rate"], item_offer_price=item_jsn["item_offer_price"], item_qty=item_qty).save() # Save the Item to the Cart
                                 return jsonify({"result":True,"msg":log_item_with_name + item_name + " and Quantity " + item_qty + " has been successfully added to your Cart!","flag":"search-success"})
                             
                             else:
                                 return jsonify({"result":False,"msg":log_item_with_name + item_name + " has only " + str(item_jsn["item_stock"]) + " " + item_jsn["item_unit"] + "!","flag":"search-error"})
                         else:
                             # Item Already in Cart. So Update the Existing
-                            cartitm_item_qty = cartitem.to_json()["item_qty"]
+                            cartitm_item_qty = json.loads(cartitem.to_json())["item_qty"]
                             if (item_jsn["item_stock"] >= (cartitm_item_qty + item_qty)):
                                 # Stock Available
                                 cartitem.update(item_qty=(cartitm_item_qty+item_qty))
@@ -955,7 +959,10 @@ def voicesearch_en():
                             # Sotck Available
                             # Add Item to Cart and Send Response Back to User
                             cart = Cart(user_id=request.form["userId"]).save() # Create New Cart and get the Cart Object
-                            CartItem(cart_id=cart.cart_id, item_id=item_jsn["item_id"], item_name=item_jsn["item_name"], item_code=item_jsn["item_code"], item_rate=item_jsn["item_rate"], item_offer_price=item_jsn["item_offer_price"], item_qty=item_qty).save() # Save the Item to the Cart
+
+                            print(item_jsn)
+
+                            CartItem(cart_id=cart.id, item_id=item_jsn["_id"], item_name=item_jsn["item_name"], item_code=item_jsn["item_code"], item_rate=item_jsn["item_rate"], item_offer_price=item_jsn["item_offer_price"], item_qty=item_qty).save() # Save the Item to the Cart
 
                             return jsonify({"result":True,"msg":log_item_with_name + item_name + " and Quantity " + item_qty + " has been successfully added to your Cart!", "flag":"search-success"})
                         
@@ -969,8 +976,8 @@ def voicesearch_en():
                 # Get the Current Cart of the User. So Expects the userId
                 user_id = request.form["userId"]
                 cart = Cart.objects(user_id=user_id).first()
-                cartitems = CartItem.objects(cart_id=cart.to_json()["cart_id"])
-                items = Item.objects(shop_id=cart.to_json()["shop_id"])
+                cartitems = CartItem.objects(cart_id=cart.to_json()["_id"])
+                items = Item.objects(shop_id=cart.to_json()["_id"])
                 
                 return jsonify({"result":True,"msg":log_success_save_cart,"flag":"search-save","cart":cart.to_json(),"cartitems":cartitems.to_json(),"items":items.to_json()})
             elif "alter" in line:
@@ -978,8 +985,8 @@ def voicesearch_en():
                 # Take the user back to the Edit Screen
                 user_id = request.form["userId"]
                 cart = Cart.objects(user_id=user_id).first()
-                cartitems = CartItem.objects(cart_id=cart.to_json()["cart_id"])
-                items = Item.objects(shop_id=cart.to_json()["shop_id"])
+                cartitems = CartItem.objects(cart_id=cart.to_json()["_id"])
+                items = Item.objects(shop_id=cart.to_json()["_id"])
                 
                 return jsonify({"result":True,"msg":log_edit_cart,"flag":"search-edit","cart":cart.to_json(),"cartitems":cartitems.to_json(),"items":items.to_json()})
             elif "search" in line:
@@ -988,8 +995,8 @@ def voicesearch_en():
                 # not in first 50% - Instead take them to the Place Order Page
                 user_id = request.form["userId"]
                 cart = Cart.objects(user_id=user_id).first()
-                cartitems = CartItem.objects(cart_id=cart.to_json()["cart_id"])
-                items = Item.objects(shop_id=cart.to_json()["shop_id"])
+                cartitems = CartItem.objects(cart_id=cart.to_json()["_id"])
+                items = Item.objects(shop_id=cart.to_json()["_id"])
                 
                 return jsonify({"result":True,"msg":log_total_bill_and_items_in_cart,"flag":"search-edit","cart":cart.to_json(),"cartitems":cartitems.to_json(),"items":items.to_json()})
             elif "place order" in line:
@@ -1030,7 +1037,7 @@ def voicesearch_en():
 
                 # Iterate Each item in the Cart and Save it to CarItem
                 print("Placed order")
-                order = json.loads(Order(shop_id=cart['shop_id'], user_id=user_id, coupon_id=cart['coupon_id'], coupon_value=cart['coupon_value'], order_status=0, order_payment=order_payment, address=address).save().to_json())
+                order = json.loads(Order(shop_id=cart['_id'], user_id=user_id, coupon_id=cart['_id'], coupon_value=cart['coupon_value'], order_status=0, order_payment=order_payment, address=address).save().to_json())
                 for item in cartitems:
                     print("OrderItem save: " + str(item))
                     OrderItem(order_id=order["_id"],item_id=item["_id"],item_name=item["item_name"],item_code=item["item_code"],item_rate=item["item_rate"],item_offer_price=item["item_offer_price"],item_qty=item["item_qty"]).save()
@@ -1046,7 +1053,7 @@ def voicesearch_en():
                 cart1.delete()
                             
                 return jsonify({"result":True,"msg":log_order_placed_success})
-            elif "cancelorder" in line:
+            elif "cancel order" in line:
                 # Cancel the Placed Order by Removing all items from the Cart
                 # Empty the Cart
                 user_id = request.form["userId"]
@@ -1058,6 +1065,21 @@ def voicesearch_en():
                 cart1.delete() # Delete Cart
 
                 return jsonify({"result":True,"msg":"Successfully Cancelled Order","flag":"cancel-order"})
+            elif "check order" in line:
+                # View your Cart
+                user_id = request.form["userId"]
+                cart = Cart.objects(user_id=user_id).first()
+                if (cart is not None):
+                    cart = json.loads(cart.to_json())
+                    cart1 = Cart.objects(user_id=user_id).first()
+                    cartitems = CartItem.objects(cart_id=cart["_id"])
+
+                    print(cart)
+                    print(cartitems)
+
+                    return jsonify({"result":True,"cart":cart,"cartitems":json.loads(cartitems.to_json()), "msg":"The following items are in your cart"})
+                else:
+                    return jsonify({"result":True,"cart":None,"cartitems":None,"msg":"Empty Cart"})
             else:
                 return jsonify({"result":False,"msg":log_invalid_audio_cmd,"flag":"search-error"})
         
@@ -1126,7 +1148,9 @@ def voiceassist_en():
             with audio_file as source:
                 audio_data = recognizer.record(source)
             # line = recognizer.recognize_sphinx(audio_data, language="en-US")
-            line = recognizer.recognize_google(audio_data, key="AIzaSyAkni5khBB5CSXPnJNO6qAts3XQCc_eYY4", language="en-IN")
+            line = recognizer.recognize_google(audio_data, language="en-IN")
+
+            print(line)
 
             if("list coupons" in line):
                 # List all coupons according to user usage
@@ -1143,7 +1167,7 @@ def voiceassist_en():
                 try:
                     cart = json.loads(Cart.objects(user_id=userId).first().to_json())
                     isCartThere = True
-                    couponIdFromCart = cart["coupon_id"]
+                    couponIdFromCart = cart["_id"]
                     # print("cart: " + str(cart))
                     # print("couponIdFromCart: " + str(couponIdFromCart) + " available in cart")
                 except:
@@ -1167,7 +1191,7 @@ def voiceassist_en():
                 if(isUserCouponListThere):
                     for coupon in adjustedCoupons1:
                         for userCoupon in userCouponList:
-                            if(coupon["_id"] == userCoupon["coupon_id"]):
+                            if(coupon["_id"] == userCoupon["_id"]):
                                 # print("coupon id: " + str(userCoupon["coupon_id"]) + " already used")
                                 adjustedCoupons1.remove(coupon)  
 
@@ -1175,7 +1199,7 @@ def voiceassist_en():
             elif ("complete order" in line):
                 # complete order
                 orderId = request.form['orderId']
-                reviewReason = request.form['reviewReason']
+                reviewReason = line
 
                 order = Order.objects(order_id=orderId).first()
                 # print("Order: " + str(order))
@@ -1194,7 +1218,7 @@ def voiceassist_en():
             elif ("cancel order" in line):
                 # cancel order
                 orderId = request.form['orderId']
-                cancelReason = request.form['cancelReason']
+                cancelReason = line
 
                 order = Order.objects(order_id=orderId).first()
                 # print("Order: " + str(order))
@@ -1213,7 +1237,7 @@ def voiceassist_en():
             elif ("return order" in line):
                 # return order
                 orderId = request.form['orderId']
-                returnReason = request.form['returnReason']
+                returnReason = line
 
                 order = Order.objects(order_id=orderId).first()
                 print("Order: " + str(order))
@@ -1326,7 +1350,8 @@ def example_audio():
             with audio_file as source:
                 audio_data = recognizer.record(source)
             # line = recognizer.recognize_sphinx(audio_data, language="en-US")
-            line = recognizer.recognize_google(audio_data, key="AIzaSyAkni5khBB5CSXPnJNO6qAts3XQCc_eYY4", language="en-IN")
+            # line = recognizer.recognize_google(audio_data, key="AIzaSyAkni5khBB5CSXPnJNO6qAts3XQCc_eYY4", language="en-IN")
+            line = recognizer.recognize_google(audio_data, language="en-IN")
 
             print(line)
             return jsonify({"result":True,"msg":log_success_converted_audio_2_text,"data":line})
