@@ -1,3 +1,4 @@
+  
 """Data models."""
 import sys
 import os
@@ -11,8 +12,8 @@ class Order(db.Document):
     order_id = db.SequenceField(primary_key=True, required=True)
     shop_id = db.IntField(required=True, default=0)
     user_id = db.IntField(required=True)
-    coupon_id = db.IntField(required=True)
-    coupon_value = db.DecimalField(required=True)
+    coupon_id = db.IntField(default=None, required=False)
+    coupon_value = db.DecimalField(default=None, required=False)
     order_status = db.IntField(required=True, default=0) # 0=> Processing, 1 => Completed, 2 => Cancelled, 3 => Returned
     order_payment = db.IntField(required=True, default=0) # 0=> COD, 1 => CARD
     cancel_reason = db.StringField(required=False, default="")
