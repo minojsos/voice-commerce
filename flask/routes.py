@@ -291,7 +291,7 @@ def predict_ocr():
             item_qtys  = []
             item_units = []
 
-            item_dict = {}
+            item_dict = []
 
             for itm in resp:
                 print(resp)
@@ -311,16 +311,18 @@ def predict_ocr():
             # Iterate Each and Create a JSON with item name, quantity (if available, else 0). Return this back to the App
             for idx, itm in enumerate(item_names):
                 print(idx)
-                item_dict[idx] = {}
-                item_dict[idx]['item_name'] = itm
+                indv_dict = {}
+                indv_dict['item_name'] = itm
                 if (len(item_qtys) > idx):
-                    item_dict[idx]['item_qty'] = item_qtys[idx]
+                    indv_dict['item_qty'] = item_qtys[idx]
                 else:
-                    item_dict[idx]['item_qty'] = 0
+                    indv_dict['item_qty'] = 0
                 if (len(item_units) > idx):
-                    item_dict[idx]['item_unit'] = item_units[idx]
+                    indv_dict['item_unit'] = item_units[idx]
                 else:
-                    item_dict[idx]['item_unit'] = 0
+                    indv_dict['item_unit'] = 0
+                
+                item_dict.append(indv_dict)
 
             return jsonify({"result":True,"msg":log_converted_image_2_data,"list":item_dict,"data":response.text})
     else:
@@ -831,9 +833,13 @@ def voicesearch_en():
             with audio_file as source:
                 audio_data = recognizer.record(source)
             # line = recognizer.recognize_sphinx(audio_data, language="en-US")
-            line = recognizer.recognize_google(audio_data, language="en-IN")
-            line = line.lower()
-            print(line)
+            line = ""
+            try:
+                line = recognizer.recognize_google(audio_data, language="en-IN")
+                line = line.lower()
+                print(line)
+            except:
+                return jsonify({"result":False,"msg":"Invalid Audio File","flag":"file-error"})
 
             # We Search Based on the Item Name in the Audio - Expected Audio Format: Item [Item Name] [Qty] [Unit] - Item Rice 2KG
             if "go back" in line:
@@ -1221,10 +1227,13 @@ def voiceassist_en():
             audio_file = sr.AudioFile(file)
             with audio_file as source:
                 audio_data = recognizer.record(source)
-            # line = recognizer.recognize_sphinx(audio_data, language="en-US")
-            line = recognizer.recognize_google(audio_data, language="en-IN")
-
-            print(line)
+            
+            try:
+                # line = recognizer.recognize_sphinx(audio_data, language="en-US")
+                line = recognizer.recognize_google(audio_data, language="en-IN")
+                print(line)
+            except:
+                return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
 
             if ("go back" in line):
                 return jsonify({"result":True,"msg":"You will be taken to the navigation","flag":"back"})
