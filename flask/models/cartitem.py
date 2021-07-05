@@ -13,7 +13,7 @@ class CartItem(db.Document):
     item_id = db.IntField(required=True)
     item_name = db.StringField(required=True)
     item_code = db.StringField(required=True)
-    item_rate = db.StringField(required=True)
+    item_rate = db.DecimalField(required=True)
     item_offer_price = db.DecimalField(required=False,default=None)
     item_qty = db.DecimalField(required=True)
     created_on = db.DateTimeField(required=True, default=datetime.datetime.utcnow)
