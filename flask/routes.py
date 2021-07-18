@@ -29,17 +29,12 @@ import random
 import string
 import warnings
 import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 import warnings
 # from gtts import gTTS
 import os
 warnings.filterwarnings('ignore')
 
 import speech_recognition as sr
-
-import nltk
-from nltk.stem import WordNetLemmatizer
 
 import re
 
@@ -69,56 +64,6 @@ api_key = os.environ.get('NANONETS_API_KEY')
 # Keyword Matching
 RESPONSE_INPUTS = ("hello", "hi", "greetings", "sup", "what's up","hey",)
 RESPONSE_RESPONSES = ["hi", "hey", "*nods*", "hi there", "hello", "I am glad! You are talking to me"]
-
-def LemTokens(tokens):
-    return [lemmer.lemmatize(token) for token in tokens]
-    remove_punct_dict = dict((ord(punct), None) for punct in string.punctuation)
-
-def LemNormalize(text):
-    return LemTokens(nltk.word_tokenize(text.lower().translate(remove_punct_dict)))
-
-def fixResponse(sentence):
-    """If user's input is a fixed response, return a response that is already stored"""
-    for word in sentence.split():
-        if word.lower() in RESPONSE_INPUTS:
-            return random.choice(RESPONSE_RESPONSES)
-
-# Generating response and processing 
-def response(user_response):
-    robo_response=''
-    sent_tokens.append(user_response)
-    TfidfVec = TfidfVectorizer(tokenizer=LemNormalize, stop_words='english')
-    tfidf = TfidfVec.fit_transform(sent_tokens)
-    vals = cosine_similarity(tfidf[-1], tfidf)
-    idx=vals.argsort()[0][-2]
-    flat = vals.flatten()
-    flat.sort()
-    req_tfidf = flat[-2]
-    if(req_tfidf==0):
-        robo_response=robo_response+"I am sorry! I don't understand you"
-        return robo_response
-    else:
-        robo_response = robo_response+sent_tokens[idx]
-        return robo_response
-
-"""
-------
-Build NLP Classifier using NaiveBayesClassifier
-Text with existing Text Corpus.
-------
-"""
-def build_nlp_model():
-    posts = nltk.corpus.nps_chat.xml_posts()[:10000]
-    # To Recognise input type as QUES. 
-    def dialogue_act_features(post):
-        features = {}
-        for word in nltk.word_tokenize(post):
-            features['contains({})'.format(word.lower())] = True
-        return features
-    featuresets = [(dialogue_act_features(post.text), post.get('class')) for post in posts]
-    size = int(len(featuresets) * 0.1)
-    train_set, test_set = featuresets[size:], featuresets[:size]
-    classifier = nltk.NaiveBayesClassifier.train(train_set)
 
 """
 -----
@@ -422,6 +367,199 @@ def ocr_addcart():
         return jsonify({"result":True,"msg":"Successfully added items to cart","list":data})
     else:
         return jsonify({"result":False,"msg":log_invalid_method})
+
+"""
+Edit Item
+---------
+"""
+@app.route('/ocr/audio', methods=['POST'])
+def ocr_edit():
+    if request.method == "POST":
+        user_id = request.form['userId']
+        # Check if the post request has the file part.
+        if "audioFile" not in request.files:
+            return jsonify({"result":False,"msg":log_no_audio})
+        
+        file = request.files["audioFile"]
+        if file.filename == "":
+            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
+        
+        if file:
+            # Speech Recognition Stuff.
+            recognizer = sr.Recognizer()
+            audio_file = sr.AudioFile(file)
+            with audio_file as source:
+                audio_data = recognizer.record(source)
+            # line = recognizer.recognize_sphinx(audio_data, language="en-US")
+            line = ""
+            try:
+                line = recognizer.recognize_google(audio_data, language="en-IN")
+                line = line.lower()
+                print(line)
+            except:
+                return jsonify({"result":False,"msg":"Invalid Audio File","flag":"file-error"})
+
+    # We Search Based on the Item Name in the Audio - Expected Audio Format: Item [Item Name] [Qty] [Unit] - Item Rice 2KG
+    if "go back" in line:
+        return jsonify({"result":True,"msg":"You will be taken to the navigation","flag":"back"})
+        
+    if "item" in line:
+        # Split By Space Assuming the Text is in the said format - Add some checks to Confirm the format
+
+        split_words = line.split("item ")
+        line = split_words[1]
+
+        item_name = "" # Item Name
+        item_qty = 0 # Item Quantity
+        item_unit = "" # Item Unit
+
+        handled = False
+        i = 0
+        # Handle numeric numbers
+        words = line.split()
+        for word in words:
+            isNumeric = re.search("^[1-9]\d*(\.\d+)?$", word)
+            if(isNumeric):
+                break
+            i = i + 1
+
+        wordsLength = len(words)
+        if(wordsLength != i):
+            handled = True
+            other = line.split(" " + words[i] + " ")
+            print(other[0])
+            print(float(words[i]))
+            print(other[1])
+                
+            item_name = other[0] # Item Name
+            item_qty = float(words[i]) # Item Quantity
+            item_unit = other[1] # Item Unit
+
+        # Handle English word numbers
+        if(handled == False):
+            isFound = False
+            isDotFound = False
+            isPointFound = False
+
+            wordNumber = ""
+            for word in words:
+                if(word.lower() == "point"):
+                    isPointFound = True
+                    wordNumber = wordNumber + " point"
+                elif(word.lower() == "dot"):
+                    isDotFound = True
+                    wordNumber = wordNumber + " dot"
+                elif(text2int(word.lower()) != "error" and word.lower() != "and" and isFound):
+                    isFound = True
+                    wordNumber = wordNumber + " " + word.lower()
+                elif(text2int(word.lower()) != "error" and word.lower() != "and" and isFound == False):
+                    isFound = True
+                    wordNumber = word.lower()
+                elif(word.lower() == "and" and isFound == True):
+                    wordNumber = wordNumber + " " + word.lower()
+
+            print("wordNumber: " + wordNumber)
+
+            numberStr = ""
+
+            if(isDotFound):
+                numberWords = wordNumber.split(" dot ")
+                decimals = numberWords[1].split()
+
+                numberStr = str(text2int(numberWords[0]))
+                numberStr = numberStr + "."
+                for decimal in decimals:
+                    numberStr = numberStr + str(text2int(decimal))
+
+            if(isPointFound):
+                numberWords = wordNumber.split(" point ")
+                decimals = numberWords[1].split()
+
+                numberStr = str(text2int(numberWords[0]))
+                numberStr = numberStr + "."
+                for decimal in decimals:
+                    numberStr = numberStr + str(text2int(decimal))
+
+            if(isDotFound == False and isPointFound == False):
+                numberStr = str(text2int(wordNumber))
+
+            print("numberStr: " + numberStr)
+            value = numberStr
+
+            other = line.split(" " + wordNumber + " ")
+            print(other[0])
+            print(float(value))
+            print(other[1])
+
+            item_name = other[0] # Item Name
+            item_qty = float(value) # Item Quantity
+            item_unit = other[1] # Item Unit
+
+        item_det = line.split(" ")
+        # item_name = item_det[1] # Item Name
+        # item_qty = item_det[2] # Item Quantity
+        # item_unit = item_det[3] # Item Unit
+
+        print(item_name)
+        print(item_qty)
+        print(item_unit)
+
+        # Banana 5 KG Delete
+        if "delete" in line:
+            print("Inside Delete Item")
+            item = Item.objects(item_name=item_name).first()
+
+            if (item != None):
+                # Check if Item  in Cart - Remove if it is in Cart
+                item_jsn = json.loads(item.to_json()) # Convert it to JSON
+
+                # Check if item is already in cart - then edit. Else New Item
+                cart = Cart.objects(user_id=request.form["userId"]).first()
+                if cart is not None:
+                    cart = json.loads(cart.to_json())
+
+                    # Cart Already Exists - Check for Item in Cart and Delete
+                    cartitem = CartItem.objects(cart_id=cart["_id"], item_id=item_jsn["_id"]).first()
+                    if (cartitem is None):
+                        # IF Item not in cart
+                        return jsonify({"result":False,"msg":log_item_with_name + item_name + " not in your cart","flag":"delete-error"})
+                    else:
+                        itm = json.loads(item.to_json())
+                        cartitem.delete()
+                        return jsonify({"result":True,"msg":log_item_with_name + item_name + " deleted from cart","itemid":item_jsn["_id"],"flag":"delete-success"})
+                else:
+                    return jsonify({"result":False,"msg":"Empty Cart","flag":"delete-error"})
+            else:
+                return jsonify({"result":False, "msg":log_item_with_name + item_name + " not found!","flag":"audio-error"})
+        elif "edit" in line:
+            # Banana 5 KG Edit
+            print("Inside Edit Item")
+            item = Item.objects(item_name=item_name).first()
+
+            if (item != None):
+                # Check if Item in Cart Already
+                item_jsn = json.loads(item.to_json()) # Convert it to JSON
+
+                # Check if item is already in cart - then edit. Else New Item
+                cart = Cart.objects(user_id=request.form["userId"]).first()
+                if cart is not None:
+                    cart = json.loads(cart.to_json())
+                    # Cart Already Exists - Check if item is in Cart Already
+                    cartitem = CartItem.objects(cart_id=cart["_id"], item_id=item_jsn["_id"])
+                    if (cartitem is None):
+                        return jsonify({"result":False,"msg":"Cannot Edit Item","flag":"edit-error"})
+                    else:
+                        itm = json.loads(item.to_json())
+                        cartitem.update(item_qty=item_qty)
+                        return jsonify({"result":True,"msg":"Successfully Updated Item","itemid":item_jsn["_id"],"flag":"edit-success"})
+                else:
+                    return jsonify({"result":False,"msg":"Cannot Edit Item","flag":"audio-error"})
+        else:
+            return jsonify({"result":False,"msg":"I do not understand this command","flag":"audio-error"})
+    else:
+        return jsonify({"result":False,"msg":"Cannot Edit Item","flag":"audio-error"})
+
+
 
 """
 Checkout
@@ -811,363 +949,372 @@ This Endpoint allows to Search for Each item and Allow User to Pick the Item the
 def voicesearch_en():
     """ Convert Speeech to Text"""
     if request.method == "POST":
-        # Check if the post request has the file part.
-        if "audioFile" not in request.files:
-            return jsonify({"result":False,"msg":log_no_audio})
-        
-        file = request.files["audioFile"]
-        if file.filename == "":
-            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
-        
-        if file:
-            # Speech Recognition Stuff.
-            recognizer = sr.Recognizer()
-            audio_file = sr.AudioFile(file)
-            with audio_file as source:
-                audio_data = recognizer.record(source)
-            # line = recognizer.recognize_sphinx(audio_data, language="en-US")
-            line = ""
-            try:
-                line = recognizer.recognize_google(audio_data, language="en-IN")
-                line = line.lower()
-                print(line)
-            except:
-                return jsonify({"result":False,"msg":"Invalid Audio File","flag":"file-error"})
+        try:
+            # Check if the post request has the file part.
+            if "audioFile" not in request.files:
+                return jsonify({"result":False,"msg":log_no_audio})
+            
+            file = request.files["audioFile"]
+            if file.filename == "":
+                return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
+            
+            if file:
+                # Speech Recognition Stuff.
+                recognizer = sr.Recognizer()
+                audio_file = sr.AudioFile(file)
+                with audio_file as source:
+                    audio_data = recognizer.record(source)
+                # line = recognizer.recognize_sphinx(audio_data, language="en-US")
+                line = ""
+                try:
+                    line = recognizer.recognize_google(audio_data, language="en-IN")
+                    line = line.lower()
+                    print(line)
+                except:
+                    return jsonify({"result":False,"msg":"Invalid Audio File","flag":"file-error"})
 
-            # We Search Based on the Item Name in the Audio - Expected Audio Format: Item [Item Name] [Qty] [Unit] - Item Rice 2KG
-            if "go back" in line:
-                return jsonify({"result":True,"msg":"You will be taken to the navigation","flag":"back"})
-            elif "item" in line:
-                # Split By Space Assuming the Text is in the said format - Add some checks to Confirm the format
+                # We Search Based on the Item Name in the Audio - Expected Audio Format: Item [Item Name] [Qty] [Unit] - Item Rice 2KG
+                if "go back" in line:
+                    return jsonify({"result":True,"msg":"You will be taken to the navigation","flag":"back"})
+                elif "item" in line:
+                    # Split By Space Assuming the Text is in the said format - Add some checks to Confirm the format
 
-                split_words = line.split("item ")
-                line = split_words[1]
+                    split_words = line.split("item ")
+                    line = split_words[1]
 
-                item_name = "" # Item Name
-                item_qty = 0 # Item Quantity
-                item_unit = "" # Item Unit
+                    item_name = "" # Item Name
+                    item_qty = 0 # Item Quantity
+                    item_unit = "" # Item Unit
 
-                handled = False
-                i = 0
-                # Handle numeric numbers
-                words = line.split()
-                for word in words:
-                    isNumeric = re.search("^[1-9]\d*(\.\d+)?$", word)
-                    if(isNumeric):
-                        break
-                    i = i + 1
-
-                wordsLength = len(words)
-                if(wordsLength != i):
-                    handled = True
-                    other = line.split(" " + words[i] + " ")
-                    print(other[0])
-                    print(float(words[i]))
-                    print(other[1])
-                    
-                    item_name = other[0] # Item Name
-                    item_qty = float(words[i]) # Item Quantity
-                    item_unit = other[1] # Item Unit
-
-                # Handle English word numbers
-                if(handled == False):
-                    isFound = False
-                    isDotFound = False
-                    isPointFound = False
-
-                    wordNumber = ""
+                    handled = False
+                    i = 0
+                    # Handle numeric numbers
+                    words = line.split()
                     for word in words:
+                        isNumeric = re.search("^[1-9]\d*(\.\d+)?$", word)
+                        if(isNumeric):
+                            break
+                        i = i + 1
 
-                        if(word.lower() == "point"):
-                            isPointFound = True
-                            wordNumber = wordNumber + " point"
-                        elif(word.lower() == "dot"):
-                            isDotFound = True
-                            wordNumber = wordNumber + " dot"
-                        elif(text2int(word.lower()) != "error" and word.lower() != "and" and isFound):
-                            isFound = True
-                            wordNumber = wordNumber + " " + word.lower()
-                        elif(text2int(word.lower()) != "error" and word.lower() != "and" and isFound == False):
-                            isFound = True
-                            wordNumber = word.lower()
-                        elif(word.lower() == "and" and isFound == True):
-                            wordNumber = wordNumber + " " + word.lower()
+                    wordsLength = len(words)
+                    if(wordsLength != i):
+                        handled = True
+                        other = line.split(" " + words[i] + " ")
+                        print(other[0])
+                        print(float(words[i]))
+                        print(other[1])
+                        
+                        item_name = other[0] # Item Name
+                        item_qty = float(words[i]) # Item Quantity
+                        item_unit = other[1] # Item Unit
 
-                    print("wordNumber: " + wordNumber)
+                    # Handle English word numbers
+                    if(handled == False):
+                        isFound = False
+                        isDotFound = False
+                        isPointFound = False
 
-                    numberStr = ""
+                        wordNumber = ""
+                        for word in words:
 
-                    if(isDotFound):
-                        numberWords = wordNumber.split(" dot ")
-                        decimals = numberWords[1].split()
+                            if(word.lower() == "point"):
+                                isPointFound = True
+                                wordNumber = wordNumber + " point"
+                            elif(word.lower() == "dot"):
+                                isDotFound = True
+                                wordNumber = wordNumber + " dot"
+                            elif(text2int(word.lower()) != "error" and word.lower() != "and" and isFound):
+                                isFound = True
+                                wordNumber = wordNumber + " " + word.lower()
+                            elif(text2int(word.lower()) != "error" and word.lower() != "and" and isFound == False):
+                                isFound = True
+                                wordNumber = word.lower()
+                            elif(word.lower() == "and" and isFound == True):
+                                wordNumber = wordNumber + " " + word.lower()
 
-                        numberStr = str(text2int(numberWords[0]))
-                        numberStr = numberStr + "."
-                        for decimal in decimals:
-                            numberStr = numberStr + str(text2int(decimal))
+                        print("wordNumber: " + wordNumber)
 
-                    if(isPointFound):
-                        numberWords = wordNumber.split(" point ")
-                        decimals = numberWords[1].split()
+                        numberStr = ""
 
-                        numberStr = str(text2int(numberWords[0]))
-                        numberStr = numberStr + "."
-                        for decimal in decimals:
-                            numberStr = numberStr + str(text2int(decimal))
+                        if(isDotFound):
+                            numberWords = wordNumber.split(" dot ")
+                            decimals = numberWords[1].split()
 
-                    if(isDotFound == False and isPointFound == False):
-                        numberStr = str(text2int(wordNumber))
+                            numberStr = str(text2int(numberWords[0]))
+                            numberStr = numberStr + "."
+                            for decimal in decimals:
+                                numberStr = numberStr + str(text2int(decimal))
 
-                    print("numberStr: " + numberStr)
-                    value = numberStr
+                        if(isPointFound):
+                            numberWords = wordNumber.split(" point ")
+                            decimals = numberWords[1].split()
 
-                    other = line.split(" " + wordNumber + " ")
-                    print(other[0])
-                    print(float(value))
-                    print(other[1])
+                            numberStr = str(text2int(numberWords[0]))
+                            numberStr = numberStr + "."
+                            for decimal in decimals:
+                                numberStr = numberStr + str(text2int(decimal))
 
-                    item_name = other[0] # Item Name
-                    item_qty = float(value) # Item Quantity
-                    item_unit = other[1] # Item Unit
+                        if(isDotFound == False and isPointFound == False):
+                            numberStr = str(text2int(wordNumber))
 
-                item_det = line.split(" ")
-                # item_name = item_det[1] # Item Name
-                # item_qty = item_det[2] # Item Quantity
-                # item_unit = item_det[3] # Item Unit
+                        print("numberStr: " + numberStr)
+                        value = numberStr
 
-                print(item_name)
-                print(item_qty)
-                print(item_unit)
+                        other = line.split(" " + wordNumber + " ")
+                        print(other[0])
+                        print(float(value))
+                        print(other[1])
 
-                # Banana 5 KG Delete
-                if "delete" in line:
-                    print("Inside Delete Item")
-                    item = Item.objects(item_name=item_name).first()
+                        item_name = other[0] # Item Name
+                        item_qty = float(value) # Item Quantity
+                        item_unit = other[1] # Item Unit
 
-                    if (item != None):
-                        # Check if Item  in Cart - Remove if it is in Cart
-                        item_jsn = json.loads(item.to_json()) # Convert it to JSON
+                    item_det = line.split(" ")
+                    # item_name = item_det[1] # Item Name
+                    # item_qty = item_det[2] # Item Quantity
+                    # item_unit = item_det[3] # Item Unit
 
-                        # Check if item is already in cart - then edit. Else New Item
-                        cart = Cart.objects(user_id=request.form["userId"]).first()
-                        if cart is not None:
-                            cart = json.loads(cart.to_json())
+                    print(item_name)
+                    print(item_qty)
+                    print(item_unit)
 
-                            # Cart Already Exists - Check for Item in Cart and Delete
-                            cartitem = CartItem.objects(cart_id=cart["_id"], item_id=item_jsn["_id"]).first()
-                            if (cartitem is None):
-                                # IF Item not in cart
-                                return jsonify({"result":False,"msg":log_item_with_name + item_name + " not in your cart","flag":"delete-error"})
+                    # Banana 5 KG Delete
+                    if "delete" in line:
+                        print("Inside Delete Item")
+                        item = Item.objects(item_name=item_name).first()
+
+                        if (item != None):
+                            # Check if Item  in Cart - Remove if it is in Cart
+                            item_jsn = json.loads(item.to_json()) # Convert it to JSON
+
+                            # Check if item is already in cart - then edit. Else New Item
+                            cart = Cart.objects(user_id=request.form["userId"]).first()
+                            if cart is not None:
+                                cart = json.loads(cart.to_json())
+
+                                # Cart Already Exists - Check for Item in Cart and Delete
+                                cartitem = CartItem.objects(cart_id=cart["_id"], item_id=item_jsn["_id"]).first()
+                                if (cartitem is None):
+                                    # IF Item not in cart
+                                    return jsonify({"result":False,"msg":log_item_with_name + item_name + " not in your cart","flag":"delete-error"})
+                                else:
+                                    itm = json.loads(item.to_json())
+                                    cartitem.delete()
+                                    return jsonify({"result":True,"msg":log_item_with_name + item_name + " deleted from cart","itemid":item_jsn["_id"],"flag":"delete-success"})
                             else:
-                                itm = json.loads(item.to_json())
-                                cartitem.delete()
-                                return jsonify({"result":True,"msg":log_item_with_name + item_name + " deleted from cart","itemid":item_jsn["_id"],"flag":"delete-success"})
+                                return jsonify({"result":False,"msg":"Empty Cart","flag":"delete-error"})
                         else:
-                            return jsonify({"result":False,"msg":"Empty Cart","flag":"delete-error"})
+                            return jsonify({"result":False, "msg":log_item_with_name + item_name + " not found!","flag":"search-error"})
+                    elif "edit" in line:
+                        # Banana 5 KG Edit
+                        print("Inside Edit Item")
+                        item = Item.objects(item_name=item_name).first()
+
+                        if (item != None):
+                            # Check if Item in Cart Already
+                            item_jsn = json.loads(item.to_json()) # Convert it to JSON
+
+                            # Check if item is already in cart - then edit. Else New Item
+                            cart = Cart.objects(user_id=request.form["userId"]).first()
+                            if cart is not None:
+                                cart = json.loads(cart.to_json())
+                                # Cart Already Exists - Check if item is in Cart Already
+                                cartitem = CartItem.objects(cart_id=cart["_id"], item_id=item_jsn["_id"])
+                                if (cartitem is None):
+                                    return jsonify({"result":False,"msg":"Cannot Edit Item","flag":"edit-error"})
+                                else:
+                                    itm = json.loads(item.to_json())
+                                    cartitem.update(item_qty=item_qty)
+                                    return jsonify({"result":True,"msg":"Successfully Updated Item","itemid":item_jsn["_id"],"flag":"edit-success"})
+                            else:
+                                return jsonify({"result":False,"msg":"Cannot Edit Item","flag":"edit=error"})
+
                     else:
-                        return jsonify({"result":False, "msg":log_item_with_name + item_name + " not found!","flag":"search-error"})
-                elif "edit" in line:
-                    # Banana 5 KG Edit
-                    print("Inside Edit Item")
-                    item = Item.objects(item_name=item_name).first()
+                        # Check if the Item exists by the name
+                        item = Item.objects(item_name=item_name).first()
+                        if (item != None):
+                            item_jsn = json.loads(item.to_json()) # Convert it to JSON
+                    
+                            # Check if item is already in cart - then edit. Else New Item
+                            cart = Cart.objects(user_id=request.form["userId"]).first()
+                            if cart is not None:
+                                cart = json.loads(cart.to_json())
 
-                    if (item != None):
-                        # Check if Item in Cart Already
-                        item_jsn = json.loads(item.to_json()) # Convert it to JSON
+                                # Cart Already Exists - Check if item is in Cart Alrady
+                                cartitem = CartItem.objects(cart_id=cart["_id"],item_id=item_jsn["_id"]).first()
 
-                        # Check if item is already in cart - then edit. Else New Item
-                        cart = Cart.objects(user_id=request.form["userId"]).first()
-                        if cart is not None:
-                            cart = json.loads(cart.to_json())
-                            # Cart Already Exists - Check if item is in Cart Already
-                            cartitem = CartItem.objects(cart_id=cart["_id"], item_id=item_jsn["_id"])
-                            if (cartitem is None):
-                                return jsonify({"result":False,"msg":"Cannot Edit Item","flag":"edit-error"})
+                                if (cartitem is None):
+                                    # If Item is not in 
+                                    if (item_jsn["item_stock"] >= item_qty):
+                                        # Stock Available
+                                        # Add to Cart and Send Response Back to User
+                                        CartItem(cart_id=cart["_id"], item_id=item_jsn["_id"], item_name=item_jsn["item_name"], item_code=item_jsn["item_code"], item_rate=item_jsn["item_price"], item_offer_price=item_jsn["item_offer_price"], item_qty=item_qty).save() # Save the Item to the Cart
+                                        return jsonify({"result":True,"msg":log_item_with_name + item_name + " and Quantity " + str(item_qty) + " has been successfully added to your Cart!","flag":"search-success","item":{"item_name":item_name,"item_qty":item_qty,"item_unit":item_jsn["item_unit"]}})
+                                    
+                                    else:
+                                        return jsonify({"result":False,"msg":log_item_with_name + item_name + " has only " + str(item_jsn["item_stock"]) + " " + item_jsn["item_unit"] + "!","flag":"search-error"})
+                                else:
+                                    # Item Already in Cart. So Update the Existing
+                                    newcartitem = json.loads(cartitem.to_json())
+                                    print(newcartitem)
+                                    cartitm_item_qty = newcartitem["item_qty"]
+                                    if (item_jsn["item_stock"] >= (cartitm_item_qty + item_qty)):
+                                        # Stock Available
+                                        cartitem.update(item_qty=(cartitm_item_qty+item_qty))
+                                        return jsonify({"result":True,"msg":log_item_with_name + item_name + " and Quantity " + str(item_qty) + " has been successfully updated in your Cart! New Quantity is " + str((cartitm_item_qty + item_qty)),"flag":"search-success","item":{"item_name":item_name,"item_qty":item_qty,"item_unit":item_jsn["item_unit"]}})
+                                    
+                                    else:
+                                        # Stock Not Available
+                                        return jsonify({"result":False,"msg":log_item_with_name + item_name + " has only " + str(item_jsn["item_stock"]) + " " + item_jsn["item_unit"] + "!", "flag":"search-error"})
+
                             else:
-                                itm = json.loads(item.to_json())
-                                cartitem.update(item_qty=item_qty)
-                                return jsonify({"result":True,"msg":"Successfully Updated Item","itemid":item_jsn["_id"],"flag":"edit-success"})
-                        else:
-                            return jsonify({"result":False,"msg":"Cannot Edit Item","flag":"edit=error"})
-
-                else:
-                    # Check if the Item exists by the name
-                    item = Item.objects(item_name=item_name).first()
-                    if (item != None):
-                        item_jsn = json.loads(item.to_json()) # Convert it to JSON
-                
-                        # Check if item is already in cart - then edit. Else New Item
-                        cart = Cart.objects(user_id=request.form["userId"]).first()
-                        if cart is not None:
-                            cart = json.loads(cart.to_json())
-
-                            # Cart Already Exists - Check if item is in Cart Alrady
-                            cartitem = CartItem.objects(cart_id=cart["_id"],item_id=item_jsn["_id"]).first()
-
-                            if (cartitem is None):
-                                # If Item is not in 
+                                
+                                # New Cart - No need to check if Item is in cart already
+                                # Check if Item is in Stock
                                 if (item_jsn["item_stock"] >= item_qty):
-                                    # Stock Available
-                                    # Add to Cart and Send Response Back to User
-                                    CartItem(cart_id=cart["_id"], item_id=item_jsn["_id"], item_name=item_jsn["item_name"], item_code=item_jsn["item_code"], item_rate=item_jsn["item_price"], item_offer_price=item_jsn["item_offer_price"], item_qty=item_qty).save() # Save the Item to the Cart
-                                    return jsonify({"result":True,"msg":log_item_with_name + item_name + " and Quantity " + str(item_qty) + " has been successfully added to your Cart!","flag":"search-success","item":{"item_name":item_name,"item_qty":item_qty,"item_unit":item_jsn["item_unit"]}})
+                                    
+                                    # Sotck Available
+                                    # Add Item to Cart and Send Response Back to User
+                                    cart = Cart(user_id=request.form["userId"]).save() # Create New Cart and get the Cart Object
+
+                                    print(item_jsn)
+
+                                    CartItem(cart_id=cart.id, item_id=item_jsn["_id"], item_name=item_jsn["item_name"], item_code=item_jsn["item_code"], item_rate=item_jsn["item_price"], item_offer_price=item_jsn["item_offer_price"], item_qty=item_qty).save() # Save the Item to the Cart
+
+                                    return jsonify({"result":True,"msg":log_item_with_name + item_name + " and Quantity " + str(item_qty) + " has been successfully added to your Cart!", "flag":"search-success","item":{"item_name":item_name,"item_qty":item_qty,"item_unit":item_jsn["item_unit"]}})
                                 
                                 else:
                                     return jsonify({"result":False,"msg":log_item_with_name + item_name + " has only " + str(item_jsn["item_stock"]) + " " + item_jsn["item_unit"] + "!","flag":"search-error"})
-                            else:
-                                # Item Already in Cart. So Update the Existing
-                                newcartitem = json.loads(cartitem.to_json())
-                                print(newcartitem)
-                                cartitm_item_qty = newcartitem["item_qty"]
-                                if (item_jsn["item_stock"] >= (cartitm_item_qty + item_qty)):
-                                    # Stock Available
-                                    cartitem.update(item_qty=(cartitm_item_qty+item_qty))
-                                    return jsonify({"result":True,"msg":log_item_with_name + item_name + " and Quantity " + str(item_qty) + " has been successfully updated in your Cart! New Quantity is " + str((cartitm_item_qty + item_qty)),"flag":"search-success","item":{"item_name":item_name,"item_qty":item_qty,"item_unit":item_jsn["item_unit"]}})
-                                
-                                else:
-                                    # Stock Not Available
-                                    return jsonify({"result":False,"msg":log_item_with_name + item_name + " has only " + str(item_jsn["item_stock"]) + " " + item_jsn["item_unit"] + "!", "flag":"search-error"})
-
-                        else:
-                            
-                            # New Cart - No need to check if Item is in cart already
-                            # Check if Item is in Stock
-                            if (item_jsn["item_stock"] >= item_qty):
-                                
-                                # Sotck Available
-                                # Add Item to Cart and Send Response Back to User
-                                cart = Cart(user_id=request.form["userId"]).save() # Create New Cart and get the Cart Object
-
-                                print(item_jsn)
-
-                                CartItem(cart_id=cart.id, item_id=item_jsn["_id"], item_name=item_jsn["item_name"], item_code=item_jsn["item_code"], item_rate=item_jsn["item_price"], item_offer_price=item_jsn["item_offer_price"], item_qty=item_qty).save() # Save the Item to the Cart
-
-                                return jsonify({"result":True,"msg":log_item_with_name + item_name + " and Quantity " + str(item_qty) + " has been successfully added to your Cart!", "flag":"search-success","item":{"item_name":item_name,"item_qty":item_qty,"item_unit":item_jsn["item_unit"]}})
-                            
-                            else:
-                                return jsonify({"result":False,"msg":log_item_with_name + item_name + " has only " + str(item_jsn["item_stock"]) + " " + item_jsn["item_unit"] + "!","flag":"search-error"})
-                    
-                    else:
-                        return jsonify({"result":False, "msg":log_item_with_name + item_name + " not found!","flag":"search-error"})
-            elif "save changes" in line:
-                # Save the Cart and Proceed to next screen to confirm
-                # Get the Current Cart of the User. So Expects the userId
-                user_id = request.form["userId"]
-                cart = Cart.objects(user_id=user_id).first()
-                cartitems = CartItem.objects(cart_id=json.loads(cart.to_json())["_id"])
-                items = Item.objects(shop_id=3)
-                
-                return jsonify({"result":True,"msg":log_success_save_cart,"flag":"search-save","cart":cart.to_json(),"cartitems":cartitems.to_json(),"items":items.to_json()})
-            elif "alter" in line:
-                # doubt
-                # Take the user back to the Edit Screen
-                user_id = request.form["userId"]
-                cart = Cart.objects(user_id=user_id).first()
-                cartitems = json.loads(CartItem.objects(cart_id=json.loads(cart.to_json())["_id"]))
-                items = Item.objects(shop_id=3)
-
-                return jsonify({"result":True,"msg":log_edit_cart,"flag":"search-edit","cart":cart.to_json(),"cartitems":cartitems.to_json()})
-            elif "search" in line:
-                # doubt
-                # Search it Against the Availability
-                # not in first 50% - Instead take them to the Place Order Page
-                user_id = request.form["userId"]
-                cart = Cart.objects(user_id=user_id).first()
-                cartitems = CartItem.objects(cart_id=json.loads(cart.to_json())["_id"])
-                items = Item.objects(shop_id=3)
-                
-                return jsonify({"result":True,"msg":"The following are the items in your cart.","flag":"search-edit","cart":cart.to_json(),"cartitems":cartitems.to_json(),"items":items.to_json()})
-            elif "place order" in line or "please order" in line:
-                # Get the user's address and total amount to be paid - Total of All Items
-                user_id = request.form["userId"]
-                cart = json.loads(Cart.objects(user_id=user_id).first().to_json())
-                cartitems = CartItem.objects(cart_id=cart["_id"])
-                user = json.loads(User.objects(user_id=user_id).first().to_json())
-
-                couponValue = 0
-                try:
-                    if(cart["coupon_value"] != None or cart["coupon_value"] > 0):
-                        couponValue = cart["coupon_value"]
-                except:
-                    couponValue = 0
-
-                totalValue = 0
-                for cartitemObj in cartitems:
-                    cartitemObj = json.loads(cartitemObj.to_json())
-                    if(cartitemObj["item_offer_price"] == None or cartitemObj["item_offer_price"] == 0):
-                        totalValue = totalValue + (float(cartitemObj["item_rate"]) * float(cartitemObj["item_qty"]))
-                    else:
-                        totalValue = totalValue + (float(cartitemObj["item_offer_price"]) * float(cartitemObj["item_qty"]))
                         
+                        else:
+                            return jsonify({"result":False, "msg":log_item_with_name + item_name + " not found!","flag":"search-error"})
+                elif "save changes" in line:
+                    # Save the Cart and Proceed to next screen to confirm
+                    # Get the Current Cart of the User. So Expects the userId
+                    user_id = request.form["userId"]
+                    cart = Cart.objects(user_id=user_id).first()
+                    cartitems = CartItem.objects(cart_id=json.loads(cart.to_json())["_id"])
+                    items = Item.objects(shop_id=3)
+                    
+                    return jsonify({"result":True,"msg":log_success_save_cart,"flag":"search-save","cart":cart.to_json(),"cartitems":cartitems.to_json(),"items":items.to_json()})
+                elif "alter" in line:
+                    # doubt
+                    # Take the user back to the Edit Screen
+                    user_id = request.form["userId"]
+                    cart = Cart.objects(user_id=user_id).first()
+                    cartitems = json.loads(CartItem.objects(cart_id=json.loads(cart.to_json())["_id"]))
+                    items = Item.objects(shop_id=3)
 
-                total = totalValue - couponValue
+                    return jsonify({"result":True,"msg":log_edit_cart,"flag":"search-edit","cart":cart.to_json(),"cartitems":cartitems.to_json()})
+                elif "search" in line:
+                    # doubt
+                    # Search it Against the Availability
+                    # not in first 50% - Instead take them to the Place Order Page
+                    user_id = request.form["userId"]
+                    cart = Cart.objects(user_id=user_id).first()
+                    cartitems = CartItem.objects(cart_id=json.loads(cart.to_json())["_id"])
+                    items = Item.objects(shop_id=3)
+                    
+                    return jsonify({"result":True,"msg":"The following are the items in your cart.","flag":"search-edit","cart":cart.to_json(),"cartitems":cartitems.to_json(),"items":items.to_json()})
+                elif "place order" in line or "please order" in line:
+                    # Get the user's address and total amount to be paid - Total of All Items
+                    user_id = request.form["userId"]
+                    cart = json.loads(Cart.objects(user_id=user_id).first().to_json())
+                    cartitems = CartItem.objects(cart_id=cart["_id"])
+                    user = User.objects(user_id=user_id).first()
+                    if (user != None):
+                        user = json.loads(user.to_json())
 
-                return jsonify({"result":True,"msg":log_order_can_be_placed,"address":user["user_address"],"total":total,"payment":"Cash On Delivery","flag":"place-order"})
-                # Iterate and tally the total
-            elif "checkout" in line.replace(" ",""):
-                # Place the Order by Moving the Cart to the Order and CartItem to OrderItem
-                # Empty the Cart
-                user_id = request.form["userId"]
-                address = line.split("out")[1]
+                    couponValue = 0
+                    try:
+                        if(cart["coupon_value"] != None or cart["coupon_value"] > 0):
+                            couponValue = cart["coupon_value"]
+                    except:
+                        couponValue = 0
 
-                cart = json.loads(Cart.objects(user_id=user_id).first().to_json())
-                print("cart: " + str(cart))
-                cartitems = json.loads(CartItem.objects(cart_id=cart["_id"]).to_json())
-                print("cartitems: " + str(cartitems))
-
-                # Iterate Each item in the Cart and Save it to CarItem
-                print("Placed order")
-                if "coupon_id" in cart and "coupon_value" in cart:
-                    order = json.loads(Order(user_id=user_id, coupon_id=cart['coupon_id'], coupon_value=cart['coupon_value'], order_status=0, order_payment=0, address=address).save().to_json())
-                else:
-                    order = json.loads(Order(user_id=user_id, order_status=0, order_payment=0, address="default address").save().to_json())
-                for item in cartitems:
-                    print("OrderItem save: " + str(item))
-                    OrderItem(order_id=order["_id"],item_id=item["_id"],item_name=item["item_name"],item_code=item["item_code"],item_rate=item["item_rate"],item_offer_price=item["item_offer_price"],item_qty=item["item_qty"]).save()
-                                
-                # delete all items from the Cart
-                # remove cart and cartitem
-                cart1 = Cart.objects(cart_id= cart['_id']).first()
-                cartitems = CartItem.objects(cart_id=cart['_id'])
-
-                # print("cart delete: " + str(cart))
-                # print("cartitems delete: " + str(cartitems))
-                cartitems.delete()
-                cart1.delete()
+                    totalValue = 0
+                    for cartitemObj in cartitems:
+                        cartitemObj = json.loads(cartitemObj.to_json())
+                        if(cartitemObj["item_offer_price"] == None or cartitemObj["item_offer_price"] == 0):
+                            totalValue = totalValue + (float(cartitemObj["item_rate"]) * float(cartitemObj["item_qty"]))
+                        else:
+                            totalValue = totalValue + (float(cartitemObj["item_offer_price"]) * float(cartitemObj["item_qty"]))
                             
-                return jsonify({"result":True,"msg":log_order_placed_success,"flag":"checkout"})
-            elif "cancel order" in line:
-                # Cancel the Placed Order by Removing all items from the Cart
-                # Empty the Cart
-                user_id = request.form["userId"]
-                cart = json.loads(Cart.objects(user_id=user_id).first().to_json())
-                cart1 = Cart.objects(user_id=user_id).first()
-                cartitems = CartItem.objects(cart_id=cart["_id"])
 
-                cartitems.delete() # Delete the Cart
-                cart1.delete() # Delete Cart
+                    total = totalValue - couponValue
+                    
+                    return jsonify({"result":True,"msg":log_order_can_be_placed,"address":user["user_address"],"total":total,"payment":"Cash On Delivery","flag":"place-order"})
+                    # Iterate and tally the total
+                elif "checkout" in line.replace(" ",""):
+                    # Place the Order by Moving the Cart to the Order and CartItem to OrderItem
+                    # Empty the Cart
+                    user_id = request.form["userId"]
+                    try:
+                        address = line.split("out")[1]
+                    except:
+                        address = "Default address"
 
-                return jsonify({"result":True,"msg":"Successfully Cancelled Order","flag":"cancel-order"})
-            elif "check order" in line:
-                # View your Cart
-                user_id = request.form["userId"]
-                cart = Cart.objects(user_id=user_id).first()
-                if (cart is not None):
-                    cart = json.loads(cart.to_json())
+                    cart = json.loads(Cart.objects(user_id=user_id).first().to_json())
+                    print("cart: " + str(cart))
+                    cartitems = json.loads(CartItem.objects(cart_id=cart["_id"]).to_json())
+                    print("cartitems: " + str(cartitems))
+
+                    # Iterate Each item in the Cart and Save it to CarItem
+                    print("Placed order")
+                    if "coupon_id" in cart and "coupon_value" in cart:
+                        order = json.loads(Order(user_id=user_id, coupon_id=cart['coupon_id'], coupon_value=cart['coupon_value'], order_status=0, order_payment=0, address=address).save().to_json())
+                    else:
+                        order = json.loads(Order(user_id=user_id, order_status=0, order_payment=0, address="default address").save().to_json())
+                    for item in cartitems:
+                        print("OrderItem save: " + str(item))
+                        OrderItem(order_id=order["_id"],item_id=item["_id"],item_name=item["item_name"],item_code=item["item_code"],item_rate=item["item_rate"],item_offer_price=item["item_offer_price"],item_qty=item["item_qty"]).save()
+                                    
+                    # delete all items from the Cart
+                    # remove cart and cartitem
+                    cart1 = Cart.objects(cart_id= cart['_id']).first()
+                    cartitems = CartItem.objects(cart_id=cart['_id'])
+
+                    # print("cart delete: " + str(cart))
+                    # print("cartitems delete: " + str(cartitems))
+                    cartitems.delete()
+                    cart1.delete()
+                                
+                    return jsonify({"result":True,"msg":log_order_placed_success,"flag":"checkout"})
+                elif "cancel order" in line:
+                    # Cancel the Placed Order by Removing all items from the Cart
+                    # Empty the Cart
+                    user_id = request.form["userId"]
+                    cart = json.loads(Cart.objects(user_id=user_id).first().to_json())
                     cart1 = Cart.objects(user_id=user_id).first()
                     cartitems = CartItem.objects(cart_id=cart["_id"])
 
-                    print(cart)
-                    print(cartitems)
+                    cartitems.delete() # Delete the Cart
+                    cart1.delete() # Delete Cart
 
-                    return jsonify({"result":True,"cart":cart,"cartitems":json.loads(cartitems.to_json()), "msg":"The following items are in your cart", "flag":"check-order"})
+                    return jsonify({"result":True,"msg":"Successfully Cancelled Order","flag":"cancel-order"})
+                elif "check order" in line:
+                    # View your Cart
+                    user_id = request.form["userId"]
+                    cart = Cart.objects(user_id=user_id).first()
+                    if (cart is not None):
+                        cart = json.loads(cart.to_json())
+                        cart1 = Cart.objects(user_id=user_id).first()
+                        cartitems = CartItem.objects(cart_id=cart["_id"])
+
+                        print(cart)
+                        print(cartitems)
+
+                        return jsonify({"result":True,"cart":cart,"cartitems":json.loads(cartitems.to_json()), "msg":"The following items are in your cart", "flag":"check-order"})
+                    else:
+                        return jsonify({"result":True,"cart":None,"cartitems":None,"msg":"Empty Cart","flag":"check-order"})
                 else:
-                    return jsonify({"result":True,"cart":None,"cartitems":None,"msg":"Empty Cart","flag":"check-order"})
+                    return jsonify({"result":False,"msg":log_invalid_audio_cmd,"flag":"search-error"})
+            
             else:
-                return jsonify({"result":False,"msg":log_invalid_audio_cmd,"flag":"search-error"})
-        
-        else:
-            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
+                return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
+        except Exception as e:
+            print(e)
+            return jsonify({"result":False,"msg":"Something is wrong with the server","flag":"search-error"})
     else:
         return jsonify({"result":False,"msg":log_invalid_req_method,"flag":"search-error"})
 
@@ -1214,210 +1361,213 @@ Retrieve Data based on wht is requested from the Voice Assistant
 @cross_origin(origin='*')
 def voiceassist_en():
     if request.method == "POST":
-        # Check if the post request has the file part.
-        if "audioFile" not in request.files:
-            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
-        
-        file = request.files["audioFile"]
-        if file.filename == "":
-            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
-        
-        # hari: list coupons
-        if file:
-            # userId=request.form["userId"]
-            # Speech Recognition Stuff.
-            recognizer = sr.Recognizer()
-            audio_file = sr.AudioFile(file)
-            with audio_file as source:
-                audio_data = recognizer.record(source)
-            
-            try:
-                # line = recognizer.recognize_sphinx(audio_data, language="en-US")
-                line = recognizer.recognize_google(audio_data, language="en-IN")
-                print(line)
-            except:
+        try:
+            # Check if the post request has the file part.
+            if "audioFile" not in request.files:
                 return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
-
-            if ("go back" in line):
-                return jsonify({"result":True,"msg":"You will be taken to the navigation","flag":"back"})
-            elif("list coupons" in line):
-                # List all coupons according to user usage
-                userId = request.form['userId']
-                isCartThere = False
-                isUserCouponListThere = False
-                couponIdFromCart = 0
-                adjustedCoupons1 = []
-
-                allCoupons = json.loads(Coupon.objects().to_json())
-                # print("allCoupons: " + str(allCoupons))
-
-                # Retreive user's cart
+            
+            file = request.files["audioFile"]
+            if file.filename == "":
+                return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
+            
+            # hari: list coupons
+            if file:
+                # userId=request.form["userId"]
+                # Speech Recognition Stuff.
+                recognizer = sr.Recognizer()
+                audio_file = sr.AudioFile(file)
+                with audio_file as source:
+                    audio_data = recognizer.record(source)
+                
                 try:
-                    cart = json.loads(Cart.objects(user_id=userId).first().to_json())
-                    isCartThere = True
-                    couponIdFromCart = cart["_id"]
-                    # print("cart: " + str(cart))
-                    # print("couponIdFromCart: " + str(couponIdFromCart) + " available in cart")
+                    # line = recognizer.recognize_sphinx(audio_data, language="en-US")
+                    line = recognizer.recognize_google(audio_data, language="en-IN")
+                    print(line)
                 except:
+                    return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
+
+                if ("go back" in line):
+                    return jsonify({"result":True,"msg":"You will be taken to the navigation","flag":"back"})
+                elif("list coupons" in line):
+                    # List all coupons according to user usage
+                    userId = request.form['userId']
                     isCartThere = False
-
-                # Retreive user's used coupons
-                try:
-                    userCouponList = json.loads(UserCoupon.objects(user_id=userId).to_json())
-                    # print("userCouponList: " + str(userCouponList))
-                    isUserCouponListThere = True
-                except:
                     isUserCouponListThere = False
+                    couponIdFromCart = 0
+                    adjustedCoupons1 = []
 
-                if(isCartThere):
-                    for coupon in allCoupons:
-                        if(coupon["_id"] != couponIdFromCart):
-                            adjustedCoupons1.append(coupon)
-                else:
-                    adjustedCoupons1 = allCoupons
+                    allCoupons = json.loads(Coupon.objects().to_json())
+                    # print("allCoupons: " + str(allCoupons))
 
-                if(isUserCouponListThere):
-                    for coupon in adjustedCoupons1:
-                        for userCoupon in userCouponList:
-                            if(coupon["_id"] == userCoupon["_id"]):
-                                # print("coupon id: " + str(userCoupon["coupon_id"]) + " already used")
-                                adjustedCoupons1.remove(coupon)  
-
-                return jsonify({"result":True,"msg":log_available_list_coupons,"flag":"list-coupon-success","listCoupons":adjustedCoupons1})
-            elif ("complete order" in line):
-                # complete order
-                orderId = request.form['orderId']
-                reviewReason = line.split("order")[1]
-
-                order = Order.objects(order_id=orderId).first()
-                # print("Order: " + str(order))
-
-                if(order["order_status"] == 0):
-                    # order in processing stage.
+                    # Retreive user's cart
                     try:
-                        order.update(order_status=1, review_reason=reviewReason)
-                        return jsonify({"result":True,"msg":log_success_order_completed, "flag":"success order completed"})
+                        cart = json.loads(Cart.objects(user_id=userId).first().to_json())
+                        isCartThere = True
+                        couponIdFromCart = cart["_id"]
+                        # print("cart: " + str(cart))
+                        # print("couponIdFromCart: " + str(couponIdFromCart) + " available in cart")
                     except:
-                        return jsonify({"result":True,"msg":log_fail_order_completed, "flag":"failed to complete order"})
-                else:
-                    # order not in processing stage.
-                    return jsonify({"result":False,"msg":log_fail_order_completed, "flag":"failed to complete order"})
+                        isCartThere = False
 
-            elif ("cancel order" in line):
-                # cancel order
-                orderId = request.form['orderId']
-                cancelReason = line.split("order")[1]
-
-                order = Order.objects(order_id=orderId).first()
-                # print("Order: " + str(order))
-
-                if(order["order_status"] == 0):
-                    # order in processing stage.
+                    # Retreive user's used coupons
                     try:
-                        order.update(order_status=2, cancel_reason=cancelReason)
-                        return jsonify({"result":True,"msg":log_success_order_cancelled, "flag":"success order cancelled"})
+                        userCouponList = json.loads(UserCoupon.objects(user_id=userId).to_json())
+                        # print("userCouponList: " + str(userCouponList))
+                        isUserCouponListThere = True
                     except:
-                        return jsonify({"result":True,"msg":log_fail_order_cancelled, "flag":"failed to cancel order"})
-                else:
-                    # order not in processing stage.
-                    return jsonify({"result":False,"msg":log_fail_order_cancelled, "flag":"failed to cancel order"})
+                        isUserCouponListThere = False
 
-            elif ("return order" in line):
-                # return order
-                orderId = request.form['orderId']
-                returnReason = line.split("order")[1]
-
-                order = Order.objects(order_id=orderId).first()
-                print("Order: " + str(order))
-
-                if(order["order_status"] == 1):
-                    # order in completed stage.
-                    try:
-                        order.update(order_status=3, return_reason=returnReason)
-                        return jsonify({"result":True,"msg":log_success_order_returned, "flag":"success order returned"})
-                    except:
-                        return jsonify({"result":True,"msg":log_fail_order_returned, "flag":"failed to return order"})
-                else:
-                    # order not in completed stage.
-                    return jsonify({"result":False,"msg":log_fail_order_returned, "flag":"failed to return order"})
-
-            elif ("list offers" in line):
-                # List all offers
-                items = json.loads(Item.objects().to_json())
-                for item in items:
-                    if(item["item_offer_price"] == 0 or item["item_offer_price"] == None):
-                        items.remove(item)
-
-                return jsonify({"result":True,"msg":log_available_list_offers,"flag":"list-offer-success","listOffers":items})  
-            elif ("select coupon" in line):
-                # add coupon to cart
-                couponId = text2int(line.split(" ")[2])
-                userId = request.form['userId']
-                coupon = Coupon.objects(coupon_id=couponId).first()
-                try:
-                    coupon1 = json.loads(Coupon.objects(coupon_id=6).first().to_json())
-                    
-                    cart = Cart.objects(user_id=userId).first()
-                    if (cart is not None):
-                        cart.update(coupon_id=coupon1["_id"], coupon_value=coupon1["coupon_value"])
+                    if(isCartThere):
+                        for coupon in allCoupons:
+                            if(coupon["_id"] != couponIdFromCart):
+                                adjustedCoupons1.append(coupon)
                     else:
-                        Cart(user_id=userId,coupon_id=coupon1["_id"],coupon_value=coupon1["coupon_value"])
+                        adjustedCoupons1 = allCoupons
 
-                    return jsonify({"result":True,"msg":"Coupon with ID "+str(couponId)+" and Value "+ str(coupon1["coupon_value"])+" has been added to your cart!","flag":"coupon-success"})
-                except:
-                    return jsonify({"result":True,"msg":"Coupon with ID "+str(couponId)+" not found!","flag":"coupon-error"})
-            elif ("coupons" in line):
-                # Retrieve All Coupons - Check usercoupon for each coupon to ensure that it is not used
-                user_id=request.form["userId"]
-                coupons = json.loads(Coupon.objects().to_json())
-                print(coupons)
-                usercoupons = json.loads(UserCoupon.objects(user_id=user_id).to_json())
-                print(usercoupons)
+                    if(isUserCouponListThere):
+                        for coupon in adjustedCoupons1:
+                            for userCoupon in userCouponList:
+                                if(coupon["_id"] == userCoupon["_id"]):
+                                    # print("coupon id: " + str(userCoupon["coupon_id"]) + " already used")
+                                    adjustedCoupons1.remove(coupon)  
 
-                return jsonify({"result":True,"msg":log_available_coupons,"flag":"coupon-success","coupons":coupons,"usercoupons":usercoupons})
+                    return jsonify({"result":True,"msg":log_available_list_coupons,"flag":"list-coupon-success","listCoupons":adjustedCoupons1})
+                elif ("complete order" in line):
+                    # complete order
+                    orderId = request.form['orderId']
+                    reviewReason = line.split("order")[1]
+
+                    order = Order.objects(order_id=orderId).first()
+                    # print("Order: " + str(order))
+
+                    if(order["order_status"] == 0):
+                        # order in processing stage.
+                        try:
+                            order.update(order_status=1, review_reason=reviewReason)
+                            return jsonify({"result":True,"msg":log_success_order_completed, "flag":"success order completed"})
+                        except:
+                            return jsonify({"result":True,"msg":log_fail_order_completed, "flag":"failed to complete order"})
+                    else:
+                        # order not in processing stage.
+                        return jsonify({"result":False,"msg":log_fail_order_completed, "flag":"failed to complete order"})
+
+                elif ("cancel order" in line):
+                    # cancel order
+                    orderId = request.form['orderId']
+                    cancelReason = line.split("order")[1]
+
+                    order = Order.objects(order_id=orderId).first()
+                    # print("Order: " + str(order))
+
+                    if(order["order_status"] == 0):
+                        # order in processing stage.
+                        try:
+                            order.update(order_status=2, cancel_reason=cancelReason)
+                            return jsonify({"result":True,"msg":log_success_order_cancelled, "flag":"success order cancelled"})
+                        except:
+                            return jsonify({"result":True,"msg":log_fail_order_cancelled, "flag":"failed to cancel order"})
+                    else:
+                        # order not in processing stage.
+                        return jsonify({"result":False,"msg":log_fail_order_cancelled, "flag":"failed to cancel order"})
+
+                elif ("return order" in line):
+                    # return order
+                    orderId = request.form['orderId']
+                    returnReason = line.split("order")[1]
+
+                    order = Order.objects(order_id=orderId).first()
+                    print("Order: " + str(order))
+
+                    if(order["order_status"] == 1):
+                        # order in completed stage.
+                        try:
+                            order.update(order_status=3, return_reason=returnReason)
+                            return jsonify({"result":True,"msg":log_success_order_returned, "flag":"success order returned"})
+                        except:
+                            return jsonify({"result":True,"msg":log_fail_order_returned, "flag":"failed to return order"})
+                    else:
+                        # order not in completed stage.
+                        return jsonify({"result":False,"msg":log_fail_order_returned, "flag":"failed to return order"})
+
+                elif ("list offers" in line):
+                    # List all offers
+                    items = json.loads(Item.objects().to_json())
+                    for item in items:
+                        if(item["item_offer_price"] == 0 or item["item_offer_price"] == None):
+                            items.remove(item)
+
+                    return jsonify({"result":True,"msg":log_available_list_offers,"flag":"list-offer-success","listOffers":items})  
+                elif ("select coupon" in line):
+                    # add coupon to cart
+                    couponId = text2int(line.split(" ")[2])
+                    userId = request.form['userId']
+                    coupon = Coupon.objects(coupon_id=couponId).first()
+                    try:
+                        coupon1 = json.loads(Coupon.objects(coupon_id=6).first().to_json())
+                        
+                        cart = Cart.objects(user_id=userId).first()
+                        if (cart is not None):
+                            cart.update(coupon_id=coupon1["_id"], coupon_value=coupon1["coupon_value"])
+                        else:
+                            Cart(user_id=userId,coupon_id=coupon1["_id"],coupon_value=coupon1["coupon_value"])
+
+                        return jsonify({"result":True,"msg":"Coupon with ID "+str(couponId)+" and Value "+ str(coupon1["coupon_value"])+" has been added to your cart!","flag":"coupon-success"})
+                    except:
+                        return jsonify({"result":True,"msg":"Coupon with ID "+str(couponId)+" not found!","flag":"coupon-error"})
+                elif ("coupons" in line):
+                    # Retrieve All Coupons - Check usercoupon for each coupon to ensure that it is not used
+                    user_id=request.form["userId"]
+                    coupons = json.loads(Coupon.objects().to_json())
+                    print(coupons)
+                    usercoupons = json.loads(UserCoupon.objects(user_id=user_id).to_json())
+                    print(usercoupons)
+
+                    return jsonify({"result":True,"msg":log_available_coupons,"flag":"coupon-success","coupons":coupons,"usercoupons":usercoupons})
+                    
+                elif ("offer" in line) or ("offers" in line):
+                    # Retrieve All Offers - Where item_offer_price is not None
+                    items = json.loads(Item.objects().to_json())
+                    for item in items:
+                        if(item["item_offer_price"] == 0 or item["item_offer_price"] == None):
+                            items.remove(item)
+                    shops = Shop.objects().to_json()
+
+                    return jsonify({"result":True,"msg":log_item_offers_in_different_shop,"flag":"offer-success","items":items,"shops":shops})
+                elif ("select order" in line):
+                    # Order
+                    # orderId = text2int(line.split(" ")[2]) # Assuming Text will be like "order 123"
+                    orderId = line.split(" ")[2]
+                    order = Order.objects(order_id=orderId).first()
+                    
+                    if (order is not None):
+                        return jsonify({"result":True, "msg":"The following is the order that you have selected","flag":"order-received","order":json.loads(order.to_json())})
+                    else:
+                        return jsonify({"result":False, "msg":"Order with provided ID not found","flag":"order-not-found","order":None})
+                elif ("pending" in line) or ("pending orders" in line):
+                    # Retrieve Pending orders
+                    orders = Order.objects(order_status=0).to_json()
+                    return jsonify({"result":True, "msg":log_current_pending_orders,"flag":"order-pending","orders":orders})
                 
-            elif ("offer" in line) or ("offers" in line):
-                # Retrieve All Offers - Where item_offer_price is not None
-                items = json.loads(Item.objects().to_json())
-                for item in items:
-                    if(item["item_offer_price"] == 0 or item["item_offer_price"] == None):
-                        items.remove(item)
-                shops = Shop.objects().to_json()
-
-                return jsonify({"result":True,"msg":log_item_offers_in_different_shop,"flag":"offer-success","items":items,"shops":shops})
-            elif ("select order" in line):
-                # Order
-                # orderId = text2int(line.split(" ")[2]) # Assuming Text will be like "order 123"
-                orderId = line.split(" ")[2]
-                order = Order.objects(order_id=orderId).first()
+                elif ("completed" in line) or ("completed orders" in line):
+                    # Retrieve Completed Orders
+                    orders = Order.objects(order_status=1).to_json()
+                    return jsonify({"result":True, "msg":log_current_completed_orders,"flag":"order-completed","orders":orders})
                 
-                if (order is not None):
-                    return jsonify({"result":True, "msg":"The following is the order that you have selected","flag":"order-received","order":json.loads(order.to_json())})
+                elif ("cancelled" in line) or ("cancelled orders" in line):
+                    # Retrieve Cancelled Orders
+                    orders = Order.objects(order_status=2).to_json()
+                    return jsonify({"result":True, "msg":"The following are the currently cancelled orders that you have!","flag":"order-cancelled","orders":orders})
+                elif ("orders" in line):
+                    return jsonify({"result":True,"msg":log_view_type_of_orders,"flag":"order-menu"})
+                elif ("profile" in line):
+                    # Get the Profile Details
+                    return None
                 else:
-                    return jsonify({"result":False, "msg":"Order with provided ID not found","flag":"order-not-found","order":None})
-            elif ("pending" in line) or ("pending orders" in line):
-                # Retrieve Pending orders
-                orders = Order.objects(order_status=0).to_json()
-                return jsonify({"result":True, "msg":log_current_pending_orders,"flag":"order-pending","orders":orders})
-            
-            elif ("completed" in line) or ("completed orders" in line):
-                # Retrieve Completed Orders
-                orders = Order.objects(order_status=1).to_json()
-                return jsonify({"result":True, "msg":log_current_completed_orders,"flag":"order-completed","orders":orders})
-            
-            elif ("cancelled" in line) or ("cancelled orders" in line):
-                # Retrieve Cancelled Orders
-                orders = Order.objects(order_status=2).to_json()
-                return jsonify({"result":True, "msg":"The following are the currently cancelled orders that you have!","flag":"order-cancelled","orders":orders})
-            elif ("orders" in line):
-                return jsonify({"result":True,"msg":log_view_type_of_orders,"flag":"order-menu"})
-            elif ("profile" in line):
-                # Get the Profile Details
-                return None
+                    return jsonify({"result":False,"msg":"I do not understand that command","flag":"command-error"})
             else:
-                return jsonify({"result":False,"msg":"I do not understand that command","flag":"command-error"})
-        else:
-            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
+                return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
+        except:
+            return jsonify({"result":False,"msg":""})
     else:
         return jsonify({"result":False,"msg":log_invalid_req_method,"flag":"assistant-error"})
 
@@ -1891,8 +2041,10 @@ def new_order():
     user_id = request.form['user_id']
     coupon_id = request.form['coupon_id']
     coupon_value = request.form['coupon_value']
+    order_status = request.form['order_status']
+    address = request.form['address']
 
-    new_order = Order(shop_id=shop_id, user_id=user_id, coupon_id=coupon_id, coupon_value=coupon_value).save()
+    new_order = Order(shop_id=shop_id, user_id=user_id, coupon_id=coupon_id, coupon_value=coupon_value, order_status=order_status, address=address).save()
     return jsonify({"result":True,"msg":log_create_new_category})
 
 """
