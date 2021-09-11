@@ -2,6 +2,7 @@
 
 from flask import Flask
 from flask import request, make_response, jsonify
+from flask.wrappers import Response
 from flask_mongoengine import MongoEngine
 from flask_cors import CORS, cross_origin
 
@@ -21,6 +22,7 @@ from models.item import Item
 from models.order import Order
 from models.orderitem import OrderItem
 from models.usercoupon import UserCoupon
+from models.storelist import StoreList
 
 import requests, os, sys
 import json
@@ -47,6 +49,17 @@ app = Flask(__name__)
 #     'password': 'root',
 #     'port': 27017
 # }
+
+# DB_URI = "mongodb+srv://root:root@cluster0.vxgus.mongodb.net/myFirstDatabase?retryWrites=true&w=majority"
+
+# app.config["MONGODB_HOST"] = DB_URI
+# app.config['MONGODB_SETTINGS'] = {
+#     'alias': 'default',
+#     'db': 'myFirstDatabase',
+#     'host': 'mongodb+srv://root:root@cluster0.vxgus.mongodb.net',
+#     'port': 27017
+# }
+
 
 CORS(app)
 
@@ -2221,6 +2234,65 @@ def delete_orderitem(orderitem_id):
 
 """
 ------
+STORE LIST FOR FUTURE
+------
+"""
+@app.route('/storeitem', methods=['POST'])
+def store_orderList():
+    try:
+        # user_id = request.form['user_id']
+        # # item_id = request.form['item_id']
+        # item_name = request.form['item_name']
+        # item_qty = request.form['item_qty']
+        user_id = 133
+        storeList_id = '45'
+        item_name = 'testName'
+        item_qty = 'test quan'
+        storeList = StoreList( user_id=storeList_id, item_name=item_name, item_qty=item_qty )
+        storeList.save()
+        return jsonify({"result": True, "msg":"list stored for future"})
+    except Exception as e:
+        return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
+
+
+@app.route('/storeitem/<int:storeList_id>', methods=['GET'])
+def get_store_orderList(storeList_id):
+    try:
+        storeList = StoreList.objects(storeList_id=storeList_id).first().to_json()
+        return jsonify({"result":True,"msg":log_success_retrieved_category,"data":storeList})
+    except Exception as e:
+        return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
+
+
+@app.route('/storeitem/<int:storeList_id>', methods=['DELETE'])
+def delete_store_orderList(storeList_id):
+    """Delete a orderitem given the ID of the usercoupon"""
+    try:
+        storeList = StoreList.objects(storeList_id=storeList_id).first()
+        storeList.delete()
+        return jsonify({"result":True,"msg":log_delete_category})
+    except Exception as e:
+        return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
+
+"""
+------
+Predit item availability
+------
+"""
+@app.route('/predictAvailability', methods=['POST'])
+def predict_availability():
+    try:
+        item_ids = [1,2,3,4,5]
+        shopList = Shop.objects().first().to_json()
+        itemList = Item.objects().first().to_json()
+        itemArray = []
+        return jsonify({"result": True, "msg":"list stored for future","data":None})
+    except Exception as e:
+        return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
+
+
+"""
+------
 TEST
 ------
 """
@@ -2232,3 +2304,14 @@ def test_function():
     
 if __name__ == "__main__":
     app.run(debug=True, threaded=True)
+
+
+class JsonSerializable(object):
+    def toJson(self):
+        return json.dumps(self.__dict__)
+
+    def __repr__(self):
+        return self.toJson()
+class FileItem(JsonSerializable):
+    def __init__(self, fname):
+        self.fname = fname
