@@ -33,6 +33,7 @@ import string
 import warnings
 import numpy as np
 import warnings
+from collections import defaultdict
 # from gtts import gTTS
 import os
 warnings.filterwarnings('ignore')
@@ -2381,6 +2382,108 @@ def profile_update():
 Orders
 -----
 """
+@app.route('/orders/canceled', methods=['GET'])
+def get_orders_canceled():
+    try:
+        orders = json.loads(Order.objects(order_status=2).to_json())
+        return jsonify({"result":True,"msg":log_success_retrieved_category,"data": orders})
+    except Exception as e:
+        return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
+
+@app.route('/orders/pending', methods=['GET'])
+def get_orders_pending():
+    try:
+        orders = json.loads(Order.objects(order_status=0).to_json())
+        return jsonify({"result":True,"msg":log_success_retrieved_category,"data": orders})
+    except Exception as e:
+        return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
+
+@app.route('/orders/completed', methods=['GET'])
+def get_orders_completed():
+    try:
+        orders = json.loads(Order.objects(order_status=1).to_json())
+        return jsonify({"result":True,"msg":log_success_retrieved_category,"data": orders})
+    except Exception as e:
+        return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
+
+@app.route('/order', methods=['GET'])
+def get_orderbyId():
+    try:
+        id= request.args.get('id')
+        order = json.loads(Order.objects(order_id=id).to_json())
+        orderItems = json.loads(OrderItem.objects(order_id=id).to_json())
+        return jsonify({"result":True,"msg":log_success_retrieved_category,"data": order, "items": orderItems})
+    except Exception as e:
+        return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
+
+@app.route('/order/canceled', methods=['POST'])
+def submit_orders_canceled():
+    try:
+        data = request.get_json()
+        print(data)
+        id = data.get('id', '')
+        feedback = data.get('feedback', '')
+        order = Order.objects(order_id=id).first()
+        order.order_status = 2
+        order.cancel_reason = feedback
+        order.save()
+        return jsonify({"result":True,"msg":log_success_retrieved_category,"data": order})
+    except Exception as e:
+        return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
+
+@app.route('/order/return', methods=['POST'])
+def submit_orders_retrn():
+    try:
+        data = request.get_json()
+        print(data)
+        id = data.get('id', '')
+        feedback = data.get('feedback', '')
+        order = Order.objects(order_id=id).first()
+        order.order_status = 0
+        order.return_reason = feedback
+        order.save()
+        return jsonify({"result":True,"msg":log_success_retrieved_category,"data": order})
+    except Exception as e:
+        return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
+
+@app.route('/order/complete', methods=['POST'])
+def submit_orders_complete():
+    try:
+        data = request.get_json()
+        print(data)
+        id = data.get('id', '')
+        feedback = data.get('feedback', '')
+        order = Order.objects(order_id=id).first()
+        order.order_status = 1
+        order.review_reason = feedback
+        order.save()
+        return jsonify({"result":True,"msg":log_success_retrieved_category,"data": order})
+    except Exception as e:
+        return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
+
+"""
+------
+Coupouns
+------
+"""
+
+@app.route('/get_coupons', methods=['GET'])
+def get_coupons():
+    try:
+        coupons = json.loads(Coupon.objects().to_json())
+        return jsonify({"result":True,"msg":log_success_retrieved_category,"data": coupons})
+    except Exception as e:
+        return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
+
+@app.route('/add_coupon', methods=['POST'])
+def add_coupon_to_cart():
+    try:
+        data = request.get_json()
+        id = data.get('id', '')
+        coupon = json.loads(Coupon.objects(coupon_id=id).to_json())
+        return jsonify({"result":True,"msg":log_success_retrieved_category,"data": coupon})
+    except Exception as e:
+        return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
 
 """
 ------
