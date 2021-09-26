@@ -2280,10 +2280,16 @@ def store_orderList():
             for x in itemList:
                 print(x['item_name'])
                 if i['item_name'] == x['item_name']:
-                    array.append(x['item_code'])
+                    obj = {
+                        "item_code": x['item_code'],
+                        "item_qty": i['item_qty'],
+                        "item_unit": i['item_unit'],
+                        "item_name": i['item_name']
+                    }
+                    array.append(obj)
 
         print(array)
-        storeList = StoreList( user_id=user_id, item_ids=array )
+        storeList = StoreList( user_id=user_id, items=array )
         storeList.save()
         return jsonify({"result": True, "msg":"list stored for future"})
     except Exception as e:

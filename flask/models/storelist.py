@@ -10,7 +10,7 @@ class StoreList(db.Document):
     """Data model for items."""
     storeList_id = db.SequenceField(primary_key=True)
     user_id = db.StringField(required=True)
-    item_ids = db.ListField(db.StringField())
+    items = db.ListField()
     item_created_on = db.DateTimeField(default=datetime.datetime.utcnow)
 
     def __repr__(self):
