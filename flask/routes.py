@@ -1,5 +1,6 @@
 # https://voice-recorder-online.com/
 
+from logging import DEBUG, debug
 from flask import Flask
 from flask import request, make_response, jsonify
 from flask.wrappers import Response
@@ -37,18 +38,29 @@ import os
 warnings.filterwarnings('ignore')
 
 import speech_recognition as sr
+from google.cloud import speech_v1p1beta1 as speech
+
 
 import re
 
+from googletrans import Translator
+# translator = Translator(service_urls=[
+#       'translate.google.com',
+#       'translate.google.co.kr',
+#     ])
+
 app = Flask(__name__)
 
-# app.config['MONGODB_SETTINGS'] = {
-#     'db': 'root',
-#     'host': 'cluster0.vxgus.mongodb.net',
-#     'username': 'root',
-#     'password': 'root',
-#     'port': 27017
-# }
+app.config['MONGODB_SETTINGS'] = {
+    'db': 'test',
+    'host': 'cluster0.vxgus.mongodb.net',
+    'username': 'root',
+    'password': 'root',
+    'port': 27017,
+    'alias':'default'
+}
+
+# app.config['MONGODB_SETTINGS'] = {'db':'testing', 'alias':'default'}
 
 # DB_URI = "mongodb+srv://root:root@cluster0.vxgus.mongodb.net/myFirstDatabase?retryWrites=true&w=majority"
 
@@ -231,7 +243,8 @@ def predict_ocr():
         if file:
             # Save Image and Call the NanoNets API with the Model ID and file.
             filename = file.filename
-            image_path = os.path.join('C:\\Users\\Minoj\\Documents\\', filename)
+            # image_path = os.path.join('C:\\Users\\Minoj\\Documents\\', filename)
+            image_path = "C:/Users/Harrish/Desktop/tamil-list.jpg"
             file.save(image_path)
             model_id = '5cd82d9b-713b-476e-9497-8b620808bd8d'
             api_key = 'zBxUmD2YDUokjIRnv-Sc71TXl3UVVz5C'
@@ -292,6 +305,7 @@ Expected Data Format
 
 {"data": [{"itemname":"yoghurt","itemqty":10},{"itemname":"rice","itemqty":1},{"itemname":"oil","itemqty":1}], "userId":1}
 """
+
 @app.route('/ocr/search', methods=['POST'])
 @cross_origin(origin='*')
 def ocr_search():
@@ -824,8 +838,8 @@ def language_picker():
             
             try:
                 line = recognizer.recognize_google(audio_data, language="en-IN")
-            except:
-                return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
+            except Exception as e:
+                return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
 
             print(line)
 
@@ -2237,37 +2251,60 @@ def delete_orderitem(orderitem_id):
 STORE LIST FOR FUTURE
 ------
 """
-@app.route('/storeitem', methods=['POST'])
+@app.route('/storeList', methods=['POST'])
 def store_orderList():
     try:
         # user_id = request.form['user_id']
         # # item_id = request.form['item_id']
         # item_name = request.form['item_name']
         # item_qty = request.form['item_qty']
-        user_id = 133
-        storeList_id = '45'
-        item_name = 'testName'
-        item_qty = 'test quan'
-        storeList = StoreList( user_id=storeList_id, item_name=item_name, item_qty=item_qty )
+        debug
+        data = request.get_json()
+        user_id = data.get('user_id', '')
+        lang = data.get('lang', '')
+        list = data.get('list', '')
+
+        # transalate to english if list in tamil
+        if lang == 'tm':
+            translator = Translator()
+            for item in list:
+                item_name = translator.translate(item['item_name']).text
+                item['item_name'] = item_name.lower()
+            print(list)
+
+        itemList = json.loads(Item.objects().to_json())
+        print(itemList)
+        array = []
+        for i in list:
+            print( i['item_name'], "i")
+            for x in itemList:
+                print(x['item_name'])
+                if i['item_name'] == x['item_name']:
+                    array.append(x['item_code'])
+
+        print(array)
+        storeList = StoreList( user_id=user_id, item_ids=array )
         storeList.save()
         return jsonify({"result": True, "msg":"list stored for future"})
     except Exception as e:
         return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
 
 
-@app.route('/storeitem/<int:storeList_id>', methods=['GET'])
-def get_store_orderList(storeList_id):
+@app.route('/storeList', methods=['GET'])
+def get_store_orderList():
     try:
-        storeList = StoreList.objects(storeList_id=storeList_id).first().to_json()
-        return jsonify({"result":True,"msg":log_success_retrieved_category,"data":storeList})
+        storeList_id= request.args.get('id')
+        storeList = json.loads(StoreList.objects(storeList_id=storeList_id).first().to_json())
+        return jsonify({"result":True,"msg":log_success_retrieved_category,"data": storeList})
     except Exception as e:
         return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
 
 
-@app.route('/storeitem/<int:storeList_id>', methods=['DELETE'])
-def delete_store_orderList(storeList_id):
+@app.route('/storeList', methods=['DELETE'])
+def delete_store_orderList():
     """Delete a orderitem given the ID of the usercoupon"""
     try:
+        storeList_id= request.args.get('id')
         storeList = StoreList.objects(storeList_id=storeList_id).first()
         storeList.delete()
         return jsonify({"result":True,"msg":log_delete_category})
@@ -2282,13 +2319,23 @@ Predit item availability
 @app.route('/predictAvailability', methods=['POST'])
 def predict_availability():
     try:
-        item_ids = [1,2,3,4,5]
-        shopList = Shop.objects().first().to_json()
-        itemList = Item.objects().first().to_json()
-        itemArray = []
-        return jsonify({"result": True, "msg":"list stored for future","data":None})
+        # item_ids = [1,2,3,4,5]
+        # shopList = Shop.objects().first().to_json()
+        # itemList = Item.objects().first().to_json()
+        # itemArray = []
+        # translator = Translator()
+       translate_list = ['This is a test', 'to see if this', 'works or if I', 'have to continue working']
+
+       translator = Translator()
+       ar = translator.translate('مرحبا').text
+       print(ar)
+    #    translations = translator.translate(translate_list, dest='sv')
+
+    #    for translation in translations:
+        # print(translation.text)
+       return jsonify({"result": True, "msg":"list stored for future","data":None})
     except Exception as e:
-        return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
+        return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":'no'})
 
 
 """
