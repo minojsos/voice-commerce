@@ -17,6 +17,8 @@ class Item(db.Document):
     item_price = db.DecimalField(required=True)
     item_offer_price = db.DecimalField(required=False, default=None)
     item_unit = db.StringField(required=True)
+    prescription = db.BooleanField(required=True)
+    pharmaceutical = db.BooleanField(required=True)
     item_created_on = db.DateTimeField(default=datetime.datetime.utcnow)
     item_updated_on = db.DateTimeField(default=None)
 

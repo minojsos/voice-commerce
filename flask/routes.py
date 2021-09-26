@@ -51,14 +51,14 @@ from googletrans import Translator
 
 app = Flask(__name__)
 
-app.config['MONGODB_SETTINGS'] = {
-    'db': 'test',
-    'host': 'cluster0.vxgus.mongodb.net',
-    'username': 'root',
-    'password': 'root',
-    'port': 27017,
-    'alias':'default'
-}
+# app.config['MONGODB_SETTINGS'] = {
+#     'db': 'test',
+#     'host': 'cluster0.vxgus.mongodb.net',
+#     'username': 'root',
+#     'password': 'root',
+#     'port': 27017,
+#     'alias':'default'
+# }
 
 # app.config['MONGODB_SETTINGS'] = {'db':'testing', 'alias':'default'}
 
@@ -2262,11 +2262,6 @@ STORE LIST FOR FUTURE
 @app.route('/storeList', methods=['POST'])
 def store_orderList():
     try:
-        # user_id = request.form['user_id']
-        # # item_id = request.form['item_id']
-        # item_name = request.form['item_name']
-        # item_qty = request.form['item_qty']
-        debug
         data = request.get_json()
         user_id = data.get('user_id', '')
         lang = data.get('lang', '')
@@ -2356,6 +2351,36 @@ def predict_availability():
     except Exception as e:
         return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":'no'})
 
+"""
+------
+User Profile edit
+------
+"""
+@app.route('/profile/update', methods=['POST'])
+def profile_update():
+    try:
+        data = request.get_json()
+        print(request.data)
+        id = data.get('id', '')
+        name = data.get('user_name', '')
+        email = data.get('user_email', '')
+        adress = data.get('user_address', '')
+        phone = data.get('user_phone', '')
+        user = User.objects(user_id=id).first()
+        user.user_name = name
+        user.user_phone = phone
+        user.user_email = email
+        user.user_address = adress
+        user.save()
+        return jsonify({"result": True, "msg":"list stored for future","data":user})
+    except Exception as e:
+        return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":{}})
+
+"""
+------
+Orders
+-----
+"""
 
 """
 ------
