@@ -314,8 +314,16 @@ def ocr_search():
         # Read Each Item
         print("Reading")
         data = request.json['data']
+        lang = request.json['lang']
 
         allitems = {}
+
+        if lang == 'tm':
+            translator = Translator()
+            for item in data:
+                item_name = translator.translate(item['itemname']).text
+                item['itemname'] = item_name.lower()
+            print(data)
 
         idx=0
         for itm in data:
@@ -2301,6 +2309,11 @@ def get_store_orderList():
     try:
         storeList_id= request.args.get('id')
         storeList = json.loads(StoreList.objects(storeList_id=storeList_id).first().to_json())
+        if request.args.get('lang') == 'tm':
+            translator = Translator()
+            for x in storeList.get('items', ''):
+                x['item_name'] = translator.translate(x['item_name'], dest="ta").text
+            return jsonify({"result":True,"msg":log_success_retrieved_category,"data": storeList})
         return jsonify({"result":True,"msg":log_success_retrieved_category,"data": storeList})
     except Exception as e:
         return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
