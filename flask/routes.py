@@ -40,6 +40,7 @@ warnings.filterwarnings('ignore')
 
 import speech_recognition as sr
 from google.cloud import speech_v1p1beta1 as speech
+import geopy.distance
 
 
 import re
@@ -52,14 +53,14 @@ from googletrans import Translator
 
 app = Flask(__name__)
 
-# app.config['MONGODB_SETTINGS'] = {
-#     'db': 'test',
-#     'host': 'cluster0.vxgus.mongodb.net',
-#     'username': 'root',
-#     'password': 'root',
-#     'port': 27017,
-#     'alias':'default'
-# }
+app.config['MONGODB_SETTINGS'] = {
+    'db': 'test',
+    'host': 'cluster0.vxgus.mongodb.net',
+    'username': 'root',
+    'password': 'root',
+    'port': 27017,
+    'alias':'default'
+}
 
 # app.config['MONGODB_SETTINGS'] = {'db':'testing', 'alias':'default'}
 
@@ -2484,6 +2485,42 @@ def add_coupon_to_cart():
         return jsonify({"result":True,"msg":log_success_retrieved_category,"data": coupon})
     except Exception as e:
         return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
+
+"""
+------
+Near by shop
+------
+"""
+@app.route('/get_nearbyshops', methods=['GET'])
+def get_shops():
+    try:
+        address= request.args.get('address')
+        print(address)
+        URL = "https://maps.googleapis.com/maps/api/geocode/json"
+        if (address != ""):
+            location_detail = {'address':address, 'key': 'AIzaSyCT0BPMCFabWU1OIKiHxhe5kB5dDJfbdO0'}
+            r = requests.get(url = URL, params = location_detail)
+            data = r.json()
+            print(data)
+            latitude = data['results'][0]['geometry']['location']['lat']
+            longitude = data['results'][0]['geometry']['location']['lng']
+            storeList = json.loads(StoreList.objects().first().to_json())
+            array = []
+            print(storeList)
+            for i in storeList:
+                print(i)
+                coords_1 = (latitude, longitude)
+                coords_2 = (i['shop_lat'], i['shop_long'])
+                dist = geopy.distance.vincenty(coords_1, coords_2).km
+                print(dist)
+                if (dist > 5):
+                    array.append(i)
+        else:
+            return jsonify({"result":False,"msg":"No Adress Input"})
+        return jsonify({"result":True,"msg":log_success_retrieved_category,"data": array})
+    except Exception as e:
+        return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
+
 
 """
 ------
