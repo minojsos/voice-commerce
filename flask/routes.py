@@ -2534,19 +2534,19 @@ def get_shops():
             location_detail = {'address':address, 'key': 'AIzaSyCT0BPMCFabWU1OIKiHxhe5kB5dDJfbdO0'}
             r = requests.get(url = URL, params = location_detail)
             data = r.json()
-            print(data)
             latitude = data['results'][0]['geometry']['location']['lat']
             longitude = data['results'][0]['geometry']['location']['lng']
-            storeList = json.loads(StoreList.objects().first().to_json())
+            print(latitude, longitude)
+            storeList = json.loads(Shop.objects().to_json())
             array = []
-            print(storeList)
+            print(storeList, 'storelisr')
             for i in storeList:
                 print(i)
                 coords_1 = (latitude, longitude)
                 coords_2 = (i['shop_lat'], i['shop_long'])
-                dist = geopy.distance.vincenty(coords_1, coords_2).km
+                dist = geopy.distance.geodesic(coords_1, coords_2).km
                 print(dist)
-                if (dist > 5):
+                if (dist < 5):
                     array.append(i)
         else:
             return jsonify({"result":False,"msg":"No Adress Input"})
