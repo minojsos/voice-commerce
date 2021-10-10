@@ -2335,21 +2335,54 @@ Predit item availability
 @app.route('/predictAvailability', methods=['POST'])
 def predict_availability():
     try:
-        # item_ids = [1,2,3,4,5]
-        # shopList = Shop.objects().first().to_json()
-        # itemList = Item.objects().first().to_json()
-        # itemArray = []
-        # translator = Translator()
-       translate_list = ['This is a test', 'to see if this', 'works or if I', 'have to continue working']
+        data = request.get_json()
+        print(data)
+        item_ids = data
+        shopList = json.loads(Shop.objects().to_json())
+        itemList = json.loads(Item.objects().to_json())
+        shopArray = []
+        print(shopList)
+        for x in shopList:
+            print(x)
+            obj = {
+                'shopObj': x,
+                "items": []
+            }
+            items = []
+            for y in itemList:
+                if x['_id'] == y['shop_id']:
+                    items.append(y)
+            obj = {
+                'shopObj': x,
+                "items": items
+            }
+            shopArray.append(obj)
+        
+        shopItems = []
+        for x in shopArray:
+            itemNo = 0
+            item = []
+    
+            for y in item_ids:
+                for z in x['items']:
+                    if y == z['_id']:
+                        itemNo = itemNo + 1
+                        obj ={"id": y, "available": True}
+                        item.append(obj)
+                        break
+                    else:
+                        obj ={"id": y, "available": False}
+                        item.append(obj)
+                        break
+            prob = (itemNo/len(item_ids)) * 100
+            objs = {
+                'shopObj': x,
+                'perc': prob,
+                'items': item
+            }
+            shopItems.append(objs)   
 
-       translator = Translator()
-       ar = translator.translate('مرحبا').text
-       print(ar)
-    #    translations = translator.translate(translate_list, dest='sv')
-
-    #    for translation in translations:
-        # print(translation.text)
-       return jsonify({"result": True, "msg":"list stored for future","data":None})
+        return jsonify({"result": True, "msg":"list stored for future","data":shopItems})
     except Exception as e:
         return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":'no'})
 
