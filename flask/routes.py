@@ -41,6 +41,8 @@ warnings.filterwarnings('ignore')
 import speech_recognition as sr
 from google.cloud import speech_v1p1beta1 as speech
 import geopy.distance
+from scipy.io import wavfile
+import soundfile as sf
 
 
 import re
@@ -1378,11 +1380,36 @@ def voicesearch_ta():
             # Speech Recognition Stuff.
             recognizer = sr.Recognizer()
             audio_file = sr.AudioFile(file)
+            # audio_file = sf.read(file) 
             with audio_file as source:
                 audio_data = recognizer.record(source)
-            line = recognizer.recognize_google(audio_data, key=GOOGLE_SPEECH_API_KEY, language="ta-LK")
+            try:
+                # y = (np.iinfo(np.int32).max * (audio_data/np.abs(audio_data).max())).astype(np.int32)
+                # wavfile.write(wav_path, fs, y)
+                # sf.read('msg0000 (2).WAV') 
+                line = recognizer.recognize_google(audio_data, language="ta-LK")
+                line = line.lower()
+                print(line)
+            except Exception as e:
+                return jsonify({"result":False,"msg":"Error \n %s" % (e),"flag":"file-error"})
 
-            return jsonify({"result":True})
+            translator = Translator()
+            text = translator.translate(line, dest="en").text
+            item_det = line.split()
+            item_name = item_det[0] 
+            item_qty = item_det[1] 
+            item_unit = item_det[2]
+            item_cmd = item_det[3]
+            # Banana 5 KG Delete
+            if item_cmd == "கூட்டு":
+                return jsonify({"result":[{"name": item_name, "qty": item_qty, "unit": item_unit, "action": 1}],"msg":"sucess"})
+
+            if item_cmd == "அழி" or item_cmd == "பள்ளி" or item_cmd == "வள்ளி":
+                return jsonify({"result":[{"name": item_name, "qty": item_qty, "unit": item_unit, "action": 0}],"msg":"sucess"})
+            
+            if item_cmd == "மாற்ற" or item_cmd == "மாற்று":
+                return jsonify({"result":[{"name": item_name, "qty": item_qty, "unit": item_unit, "action": 2}],"msg":"sucess"})
+            return jsonify({"result":item_det,"msg":"Wrong Action","flag":"file-error"})
         else:
             return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
     else:
