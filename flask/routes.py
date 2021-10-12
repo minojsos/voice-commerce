@@ -983,9 +983,9 @@ This Endpoint allows to Search for Each item and Allow User to Pick the Item the
 # done test
 #  
 # Hari
-@app.route('/voicesearch/en', methods=["GET","POST"])
+@app.route('/voicesearch', methods=["GET","POST"])
 @cross_origin(origin='*')
-def voicesearch_en():
+def voicesearch():
     """ Convert Speeech to Text"""
     if request.method == "POST":
         try:
@@ -1356,6 +1356,61 @@ def voicesearch_en():
             return jsonify({"result":False,"msg":"Something is wrong with the server","flag":"search-error"})
     else:
         return jsonify({"result":False,"msg":log_invalid_req_method,"flag":"search-error"})
+
+
+@app.route('/voicesearch/en', methods=["POST"])
+@cross_origin(origin='*')
+def voicesearch_en():
+    """ Convert Speeech to Text"""
+    if request.method == "POST":
+        # Check if the post request has the file part.
+        if "audioFile" not in request.files:
+            return jsonify({"result":False,"msg":log_no_audio})
+        
+        file = request.files["audioFile"]
+        if file.filename == "":
+            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
+        
+        if file:
+            # Speech Recognition Stuff.
+            recognizer = sr.Recognizer()
+            audio_file = sr.AudioFile(file)
+            # audio_file = sf.read(file) 
+            with audio_file as source:
+                audio_data = recognizer.record(source)
+            try:
+                # y = (np.iinfo(np.int32).max * (audio_data/np.abs(audio_data).max())).astype(np.int32)
+                # wavfile.write(wav_path, fs, y)
+                # sf.read('msg0000 (2).WAV') 
+                print(audio_data)
+                line = recognizer.recognize_google(audio_data, language="en-US")
+                line = line.lower()
+                print(line)
+            except Exception as e:
+                return jsonify({"result":False,"msg":"Error \n %s" % (e),"flag":"file-error"})
+
+            # translator = Translator()
+            # text = translator.translate(line, dest="en").text
+            item_det = line.split()
+            item_name = item_det[0] 
+            item_qty = item_det[1] 
+            item_unit = item_det[2]
+            item_cmd = item_det[3]
+            # Banana 5 KG Delete
+            if item_cmd == "add":
+                return jsonify({"result":[{"name": item_name, "qty": item_qty, "unit": item_unit, "action": 1}],"msg":"sucess"})
+
+            if item_cmd == "delete":
+                return jsonify({"result":[{"name": item_name, "qty": item_qty, "unit": item_unit, "action": 0}],"msg":"sucess"})
+            
+            if item_cmd == "edit":
+                return jsonify({"result":[{"name": item_name, "qty": item_qty, "unit": item_unit, "action": 2}],"msg":"sucess"})
+            return jsonify({"result":item_det,"msg":"Wrong Action","flag":"Wrong Action"})
+        else:
+            return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
+    else:
+        return jsonify({"result":False,"msg":log_invalid_req_method,"flag":"navigation-error"})
+
 
 """
 Voice Search - Create List (LK)
@@ -1938,7 +1993,9 @@ COUPON
 @app.route('/coupons', methods=['GET'])
 def get_all_coupons():
     """Retrieve all Coupons from our database."""
+    id= request.args.get('id')
     coupons = Coupon.objects().to_json()
+    userCoupons = UserCoupon.objects(user_id=id).to_json
     return jsonify({"result":True,"msg":log_success_retrieved_all_coupons,"data":coupons})
 
 # done test
@@ -2363,22 +2420,30 @@ Predit item availability
 def predict_availability():
     try:
         data = request.get_json()
-        print(data)
-        item_ids = data
+        print(data[1].get('items'))
+        item_ids =data[1].get('items')
+        lang = data[0].get('lang')
         shopList = json.loads(Shop.objects().to_json())
         itemList = json.loads(Item.objects().to_json())
         shopArray = []
-        print(shopList)
         for x in shopList:
-            print(x)
-            obj = {
-                'shopObj': x,
-                "items": []
-            }
             items = []
             for y in itemList:
                 if x['_id'] == y['shop_id']:
-                    items.append(y)
+                    it = {
+                        "id": y['_id'],
+                        "shop_id": y['shop_id'],
+                        "item_name": y["item_name"],
+                        "item_stock": y["item_stock"],
+                        "item_price": y["item_price"],
+                        "item_offer_price": y["item_offer_price"],
+                        "item_unit": y["item_unit"],
+                        "available": False,
+                        "category_id": y["category_id"]
+                        # "pharmaceutical": y["pharmaceutical"],
+                        # "prescription": y["prescription"]
+                    }
+                    items.append(it)
             obj = {
                 'shopObj': x,
                 "items": items
@@ -2386,24 +2451,38 @@ def predict_availability():
             shopArray.append(obj)
         
         shopItems = []
-        for x in shopArray:
+        translator = Translator()
+        for a in shopArray:
             itemNo = 0
             item = []
-    
-            for y in item_ids:
-                for z in x['items']:
-                    if y == z['_id']:
-                        itemNo = itemNo + 1
-                        obj ={"id": y, "available": True}
+            # for z in a['items']:
+            for b in item_ids:
+                if [x for x in a['items'] if x['item_name'] == b['name']] and [x for x in a['items'] if b['quan'] <= x['item_stock']]:
+                    itemNo = itemNo + 1
+                    # z['available'] = True
+                    # z['item_name'] = translator.translate(b['name'], dest=lang).text
+                    print([x for x in a['items'] if x['item_name'] == b['name']])
+                    obj ={  "name": translator.translate(b['name'], dest=lang).text, 
+                            "quan": b['quan'],  
+                            "available": True,
+                            "item_price": [x for x in a['items'] if x['item_name'] == b['name']][0].get('item_price'),
+                            "item_offer_price": [x for x in a['items'] if x['item_name'] == b['name']][0].get('item_offer_price')
+                        }
+                    item.append(obj)    
+                else:
+                    if [x for x in itemList if x['item_name'] == b['name']]:
+                        categoryId = [x for x in itemList if x['item_name'] == b['name']][0].get('category_id')
+                        print(categoryId)
+                        nlist = [x for x in a['items'] if x['category_id'] == categoryId]
+                        obj ={"name": translator.translate(b['name'], dest=lang).text,  "available": False, "similar-items": nlist}
                         item.append(obj)
-                        break
                     else:
-                        obj ={"id": y, "available": False}
+                        obj ={"name": translator.translate(b['name'], dest=lang).text, "available": False, "similar-items": nlist}
                         item.append(obj)
-                        break
+            # [x for x in myList if x.n == 30]
             prob = (itemNo/len(item_ids)) * 100
             objs = {
-                'shopObj': x,
+                'shopObj': a,
                 'perc': prob,
                 'items': item
             }
@@ -2411,7 +2490,7 @@ def predict_availability():
 
         return jsonify({"result": True, "msg":"list stored for future","data":shopItems})
     except Exception as e:
-        return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":'no'})
+        return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":data})
 
 """
 ------
@@ -2522,6 +2601,32 @@ def submit_orders_complete():
     except Exception as e:
         return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
 
+
+@app.route('/order/details', methods=['GET'])
+def get_orderDetailsbyId():
+    try:
+        userId= request.args.get('userId')
+        lang = request.args.get('lang')
+        order = json.loads(Order.objects(user_id=userId).to_json())
+        orderItems = json.loads(OrderItem.objects().to_json())
+        itemList = json.loads(Item.objects().to_json())
+        orders =[]
+        # print(orderItems)
+        translator = Translator()
+        for x in order:
+            item = [] 
+            for y in orderItems:
+                if x['_id'] == y['order_id']:
+                    y['item_name'] = translator.translate(y['item_name'], dest=lang).text
+                    item.append(y)
+            obj = {
+                "orderId": x['_id'], "shopId": x['shop_id'], "items": item
+            }
+            orders.append(obj)
+        return jsonify({"result":True,"msg":log_success_retrieved_category, "data": orders})
+    except Exception as e:
+        return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
+
 """
 ------
 Coupouns
@@ -2531,8 +2636,17 @@ Coupouns
 @app.route('/get_coupons', methods=['GET'])
 def get_coupons():
     try:
+        data = request.get_json()
+        id = data.get('id', '')
         coupons = json.loads(Coupon.objects().to_json())
-        return jsonify({"result":True,"msg":log_success_retrieved_category,"data": coupons})
+        userCoupons = json.loads(UserCoupon.objects(user_id=id).to_json())
+        otherCoupons = []
+        for x in coupons:
+            for y in userCoupons:
+                if x['id'] != y['coupon_id']:
+                    otherCoupons.append(x)
+
+        return jsonify({"result":True,"msg":log_success_retrieved_category,"data": otherCoupons})
     except Exception as e:
         return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
 
@@ -2545,6 +2659,73 @@ def add_coupon_to_cart():
         return jsonify({"result":True,"msg":log_success_retrieved_category,"data": coupon})
     except Exception as e:
         return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
+
+"""
+------
+Coupouns
+------
+"""
+
+@app.route('/get_offers', methods=['GET'])
+def get_offers():
+    try:
+        id= request.args.get('id')
+        lang = request.args.get('lang')
+        print(id, lang)
+        userobj = json.loads(User.objects(user_id=id).to_json())
+        print(userobj[0])
+        latitude = userobj[0].get('user_lat')
+        longitude = userobj[0].get('user_long')
+        print(latitude, longitude)
+        storeList = json.loads(Shop.objects().to_json())
+        array = []
+        print(storeList, 'storelisr')
+        for i in storeList:
+            print(i)
+            coords_1 = (latitude, longitude)
+            coords_2 = (i['shop_lat'], i['shop_long'])
+            dist = geopy.distance.geodesic(coords_1, coords_2).km
+            print(dist)
+            if (dist < 5):
+                array.append(i)
+        # shopList = json.loads(Shop.objects().to_json())
+        itemList = json.loads(Item.objects().to_json())
+        shopArray = []
+        print(array)
+        for x in array:
+            print(x)
+            obj = {
+                'shopObj': x,
+                "items": []
+            }
+            items = []
+            for y in itemList:
+                if x['_id'] == y['shop_id']:
+                    if y['item_offer_price'] !=0:
+                        items.append(y)
+            obj = {
+                'shopObj': x,
+                "items": items
+            }
+            shopArray.append(obj)
+
+        outputArray = []
+        translator = Translator()
+        for z in shopArray:
+            if len(z['items']) > 0:
+                item = []
+                for y in z['items']:
+                    item.append({ "name": translator.translate(y['item_name'], dest=lang).text, "price": y['item_price'],  "item_offer_price": y['item_offer_price']})
+                onb = {
+                    "item": item,
+                     "shop": z['shopObj']
+                }
+                outputArray.append(onb)
+                
+        return jsonify({"result":True,"msg":log_success_retrieved_category,"data": outputArray})
+    except Exception as e:
+        return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
+
 
 """
 ------
@@ -2580,6 +2761,16 @@ def get_shops():
         return jsonify({"result":True,"msg":log_success_retrieved_category,"data": array})
     except Exception as e:
         return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
+
+"""
+------
+Coupouns
+------
+"""
+
+@app.route('/checkout-final',methods=['POST'])
+def checkout():
+    return "true"
 
 
 """
