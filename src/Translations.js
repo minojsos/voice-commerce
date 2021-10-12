@@ -24,7 +24,6 @@ export const LocalizationProvider = ({children}) => { // 9
     setAppLanguage(language);
     AsyncStorage.setItem(APP_LANGUAGE, language);
   };
-
   // 12
   const initializeAppLanguage = async () => {
     const currentLanguage = await AsyncStorage.getItem(APP_LANGUAGE);

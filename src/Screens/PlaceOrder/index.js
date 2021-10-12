@@ -139,16 +139,6 @@ const MainScreen = ({routes, route, navigation}) => {
     }
   }
 
-  useEffect(() => {
-    if (language == 'ta') {
-      setLanguageTts('ta-IN')
-    } else {
-      setLanguageTts('en-IN')
-    }
-
-    AsyncStorage.setItem('language', language);
-  }, [language]);
-
   const names = ['Rice', 'Sugar', 'Flour'];
 
   const record = () => {

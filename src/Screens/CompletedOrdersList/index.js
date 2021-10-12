@@ -30,6 +30,7 @@ const MainScreen = ({routes, navigation}) => {
   const [languageTts, setLanguageTts] = useState('en-IN');
   const [locale, setLocale] = useState('en_us');
   const [isRecording, setIsRecording] = useState(false);
+  const [completedOrdersList, setCompletedOrdersList] = useState([])
 
   const LISTEN_COMMAND_EN = "begin"
   const LISTEN_COMMAND_TA = "தொடங்க"
@@ -38,7 +39,6 @@ const MainScreen = ({routes, navigation}) => {
     translations
   } = useContext(LocalizationContext);
 
-  const [completedOrdersList, setCompletedOrdersList] = useState([])
 
   const createData = () => {
     var orders = []
@@ -52,8 +52,25 @@ const MainScreen = ({routes, navigation}) => {
     setCompletedOrdersList(orders)
   }
 
+  const getData = async () => {
+    try {
+      var allOrders=[]
+      const orders = await AsyncStorage.getItem('@allorders');
+
+      for (var i=0; i<orders.length; i++) {
+        if (orders[i].order_status == 1) {
+          allOrders.push({"order_id": orders[i].order_id, "shop_id": orders[i].shop_id, "shop_name": orders[i].shop_name, "coupon_id": orders[i].coupon_id, "coupon_code": orders[i].coupon_code, "coupon_value": orders[i].coupon_value, "order_status": orders[i].order_status, "order_payment": orders[i].order_payment, "items": orders[i].items})
+        }
+      }
+
+      setCompletedOrdersList(allOrders)
+    } catch (e) {
+      console.log('ee');
+    }
+  }
+
   useEffect(() => {
-    createData()
+    getData()
     Voice.onSpeechStart = onSpeechStart()
     Voice.onSpeechRecognized = onSpeechRecognized()
     Voice.onSpeechResults = onSpeechResults()
@@ -120,14 +137,14 @@ const MainScreen = ({routes, navigation}) => {
           if (!isNaN(list[i])) {
             // Is a Number
             console.log("Order Number: "+list[i])
+            for (var i=0; i < completedOrdersList.length; i++) {
+              if (completedOrdersList[i].order_id == list[i]) {
+                // matching order
 
-            // Find the Order in list and navigate
+                navigation.navigate('orderCancelled', completedOrdersList[i])
+              }
+            }
 
-          } else {
-            // Try to convert to Number
-            console.log("Order Number: "+list[i])
-
-            // Find the order in list and navigate
           }
         }
       } else if (menuitem.includes("ஒர்டெர்")) {
@@ -136,13 +153,13 @@ const MainScreen = ({routes, navigation}) => {
           if (!isNaN(list[i])) {
             // Is a Number
             console.log("Order Number: "+list[i])
-            
-            // Find the order in list and navigate
-          } else {
-            // Try to Convert to Number
-            console.log("Order Number: "+list[i])
-            
-            // Find the order in list and navigate
+            for (var i=0; i < completedOrdersList.length; i++) {
+              if (completedOrdersList[i].order_id == list[i]) {
+                // matching order
+
+                navigation.navigate('orderCancelled', completedOrdersList[i])
+              }
+            }
           }
         }
       }

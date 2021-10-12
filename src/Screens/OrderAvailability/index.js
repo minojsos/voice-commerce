@@ -72,7 +72,7 @@ const MainScreen = ({routes, route, navigation}) => {
     var msg = "";
 
     for (var i=0; i < availability.length; i++) {
-      msg += "Shop "+availability[i].shop_name+" has an availability of "+(availability[i].availability)+"% of the total list"
+      msg += "Shop "+availability[i].shop_name+" has an availability of "+(availability[i].perc)+"% of the total list"
     }
 
     if (msg == "" || availability.length == 0) {
@@ -183,16 +183,6 @@ const MainScreen = ({routes, route, navigation}) => {
     }
   }
 
-  useEffect(() => {
-    if (language == 'ta') {
-      setLanguageTts('ta-IN')
-    } else {
-      setLanguageTts('en-IN')
-    }
-
-    AsyncStorage.setItem('language', language);
-  }, [language]);
-
   const record = () => {
     console.log('record');
 
@@ -302,7 +292,7 @@ const MainScreen = ({routes, route, navigation}) => {
     
     for (var i=0; i < availability.length; i++) {
       if (availability[i].shop_id == shop_id) {
-        msg += "Shop "+availability[i].shop_name+" has an availability of "+(availability[i].availability*100)+"% of the total list";
+        msg += "Shop "+availability[i].shop_name+" has an availability of "+(availability[i].perc*100)+"% of the total list";
 
         Tts.speak('Availaibility of the Products from the chosen shop is as follows.\n'+msg, {
           androidParams: {
@@ -360,8 +350,8 @@ const MainScreen = ({routes, route, navigation}) => {
                     padding: 5
                   }}>
                     <Title style={{fontSize: 16}}>{item.shop_name}</Title>
-                    <Paragraph style={{margin: 5, fontSize: 12}} accessibile={true} accessibilityRole="text" accessibilityLabel={`Availability from Shop ${item.shop_name} is ${item.availability}%`}>
-                      This Shop has {item.availability}% of items in your list.
+                    <Paragraph style={{margin: 5, fontSize: 12}} accessibile={true} accessibilityRole="text" accessibilityLabel={`Availability from Shop ${item.shop_name} is ${item.perc}%`}>
+                      This Shop has {item.perc}% of items in your list.
                     </Paragraph>
                   </View>
                 </View>

@@ -23,14 +23,14 @@ const Root = () => {
   return (
     <Screen>
       <NetInfoProvider>
-        <LocaleContextProvider>
+        <LocalizationProvider>
           <StoreProvider store={store}>
             <StatusBar translucent backgroundColor={'rgba(0,0,0,0.2)'} />
             <ThemeProvider>
               <ThemeConsumer />
             </ThemeProvider>
           </StoreProvider>
-        </LocaleContextProvider>
+        </LocalizationProvider>
       </NetInfoProvider>
     </Screen>
   );

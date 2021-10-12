@@ -22,7 +22,7 @@ const MainScreen = ({routes, route, navigation}) => {
   // eslint-disable-next-line prettier/prettier
   const {response} = route.params;
   const [resList, setListData] = useState('');
-  const [order, setOrder] = useState(null);
+  const [order, setOrder] = useState(route.params);
   const [total, setTotal] = useState(0);
 
   const LISTEN_COMMAND_EN = "begin"
@@ -33,7 +33,6 @@ const MainScreen = ({routes, route, navigation}) => {
   } = useContext(LocalizationContext);
   
   useEffect(() => {
-    createData()
     Voice.onSpeechStart = onSpeechStart()
     Voice.onSpeechRecognized = onSpeechRecognized()
     Voice.onSpeechResults = onSpeechResults()
@@ -233,7 +232,7 @@ const MainScreen = ({routes, route, navigation}) => {
                     <Paragraph>
                       <Text>
                         {translations['shopLabel']}: {order.shop_name}{"\n"}
-                        {translations['couponLabel']}: {order.coupon_id != null ? order.coupon_code + " - Rs." + order.coupon_value : "None"}{"\n"}
+                        {translations['couponLabel']}: {order.coupon_id != null ? order.coupon_code + " - "+translations['currencyLabel']+"." + order.coupon_value : "None"}{"\n"}
                         {translations['paymentMethodLabel']}: {order.order_payment == 0 ? "Cash On Delivery" : "Card"}{"\n"}
                         {translations['orderStatusLabel']}: Cancelled{"\n"}
                       </Text>

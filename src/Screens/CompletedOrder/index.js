@@ -22,7 +22,7 @@ const MainScreen = ({routes, route, navigation}) => {
   // eslint-disable-next-line prettier/prettier
   const {response} = route.params;
   const [resList, setListData] = useState('');
-  const [order, setOrder] = useState(null);
+  const [order, setOrder] = useState(route.params);
   const [total, setTotal] = useState(0);
 
   const LISTEN_COMMAND_EN = "begin"
@@ -33,12 +33,11 @@ const MainScreen = ({routes, route, navigation}) => {
   } = useContext(LocalizationContext);
   
   useEffect(() => {
-    createData()
     Voice.onSpeechStart = onSpeechStart()
     Voice.onSpeechRecognized = onSpeechRecognized()
     Voice.onSpeechResults = onSpeechResults()
 
-    Tts.speak("You are viewing Order #1", {
+    Tts.speak("You are viewing Order #"+order._id, {
       androidParams: {
         KEY_PARAM_PAN: -1,
         KEY_PARAM_VOLUME: 0.5,

@@ -126,7 +126,7 @@ const MainScreen = ({routes, route, navigation}) => {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
-          body: formData,
+          body: JSON.stringify({"lang":"en","items":searchList}),
         })
           .then((response) => response.json())
           .then((response) => {
@@ -142,16 +142,6 @@ const MainScreen = ({routes, route, navigation}) => {
       setIsRecording(false)
     }
   }
-
-  useEffect(() => {
-    if (language == 'ta') {
-      setLanguageTts('ta-IN')
-    } else {
-      setLanguageTts('en-IN')
-    }
-
-    AsyncStorage.setItem('language', language);
-  }, [language]);
 
   const record = () => {
     console.log('record');

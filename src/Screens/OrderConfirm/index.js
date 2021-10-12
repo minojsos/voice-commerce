@@ -29,6 +29,8 @@ const MainScreen = ({routes, route, navigation}) => {
   const [language, setLanguage] = useState('en');
   const [languageTts, setLanguageTts] = useState('en-IN');
   const [isRecording, setIsRecording] = useState(false);
+  const [coupon, setCoupon] = useState(null)
+  const [totalAmount, setTotalAmount] = useState(0)
 
   const LISTEN_COMMAND_EN = "begin"
   const LISTEN_COMMAND_TA = "தொடங்க"
@@ -41,6 +43,10 @@ const MainScreen = ({routes, route, navigation}) => {
     const _toggleDrawer = () => {
       navigation.toggleDrawer();
     };
+
+    // Store the Selected Coupon
+    getData()
+
     Voice.onSpeechStart = onSpeechStart()
     Voice.onSpeechRecognized = onSpeechRecognized()
     Voice.onSpeechResults = onSpeechResults()
@@ -55,6 +61,7 @@ const MainScreen = ({routes, route, navigation}) => {
     }
 
     Tts.setDefaultLanguage(languageTts)
+    // Confirm Order
     Tts.speak(
       translations.formatString(translations['orderConfirmTts'], {total: totalAmount}),
       {
@@ -65,17 +72,37 @@ const MainScreen = ({routes, route, navigation}) => {
         },
       },
     );
+    // Read the Coupon if it Exists
+    if (coupon != null) {
+      Tts.speak(
+        translations.formatString(translations['couponDetailText'], {coupon_code: coupon.coupon_code, currency: translations['currencyLabel'], coupon_value: coupon.coupon_value}),
+        {
+          androidParams: {
+            KEY_PARAM_PAN: -1,
+            KEY_PARAM_VOLUME: 0.5,
+            KEY_PARAM_STREAM: 'STREAM_MUSIC',
+          },
+        },
+      );
+    }
 
-    var totalAmount=0
+    var totalAmt=0
     for (var i=0; i < theArray.items.length; i++) {
       if (theArray.items[i].item_offer_price == null || theArray.items[i].item_offer_price <= 0) {
         Tts.speak(translations.formatString(translations['readListConfirmTts'], {item_name: theArray.items[i].item_name, item_qty: theArray.items[i].item_qty, item_price: theArray.items[i].item_price}))
-        totalAmount += (theArray.items[i].item_price * theArray.items[i].item_qty)
+        totalAmt += (theArray.items[i].item_price * theArray.items[i].item_qty)
       } else {
         Tts.speak(translations.formatString(translations['readListConfirmTts'], {item_name: theArray.items[i].item_name, item_qty: theArray.items[i].item_qty, item_price: theArray.items[i].item_offer_price}))
-        totalAmount += theArray.items[i].item_offer_price * theArray.items[i].item_qty
+        totalAmt += theArray.items[i].item_offer_price * theArray.items[i].item_qty
       }
     }
+    if (coupon != null) {
+      totalAmt = totalAmt - coupon.coupon_value
+      if (totalAmt < 0) {
+        totalAmt=0
+      }
+    }
+    setTotalAmount(totalAmt)
 
     const options = {
       sampleRate: 16000, // default 44100
@@ -96,6 +123,10 @@ const MainScreen = ({routes, route, navigation}) => {
   
     return () => clearInterval(interval); // This represents the unmount function, in which you need to clear your interval to prevent memory leaks.
   }, [navigation, theme.colors.headerTitle]);
+
+  const getData = async () => {
+    setCoupon(await AsyncStorage.getItem('@selectedcoupon'))
+  }
 
   const onSpeechStart = (e) => {
 
@@ -129,7 +160,7 @@ const MainScreen = ({routes, route, navigation}) => {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
-          body: formData,
+          body: {"shop_id":theArray.shop_id, "availability":theArray.perc, "shop_name":theArray.shop_name, "shop_address": theArray.shop_address, "shop_lat": theArray.shop_lat, "shop_long": theArray.shop_long, "coupon_id":coupon._id, "coupon_value":coupon.coupon_value, "items":theArray.items},
         })
           .then((response) => response.json())
           .then((response) => {
@@ -147,16 +178,6 @@ const MainScreen = ({routes, route, navigation}) => {
       setIsRecording(false)
     }
   }
-
-  useEffect(() => {
-    if (language == 'ta') {
-      setLanguageTts('ta-IN')
-    } else {
-      setLanguageTts('en-IN')
-    }
-
-    AsyncStorage.setItem('language', language);
-  }, [language]);
 
   const record = () => {
     console.log('record');

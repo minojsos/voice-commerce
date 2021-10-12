@@ -53,7 +53,7 @@ const MainScreen = ({ routes, route, navigation }) => {
     var pharmaceutical=[]
     var prescription=[]
     for (var i =0; i < allItems.items.length; i++) {
-      if (allItems.items[i].availability == 1) {
+      if (allItems.items[i].available == true) {
         if (allItems.items[i].pharmaceutical == true) {
           pharmaceutical.push(allItems.items[i])
         }
@@ -140,16 +140,6 @@ const MainScreen = ({ routes, route, navigation }) => {
       setIsRecording(false)
     }
   }
-
-  useEffect(() => {
-    if (language == 'ta') {
-      setLanguageTts('ta-IN')
-    } else {
-      setLanguageTts('en-IN')
-    }
-
-    AsyncStorage.setItem('language', language);
-  }, [language]);
 
   const record = () => {
     console.log('record');

@@ -94,13 +94,101 @@ const MainScreen = ({routes, navigation}) => {
       console.log(e.value)
       var menuitem = e.value;
       if (menuitem.includes("coupon") || menuitem.includes("கூப்பன்")) {
+        // Get offers from the API
+        var url = 'get_coupons'
+
+        fetch(`${BASE_URL}${url}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        })
+          .then((response) => response.json())
+          .then((response) => {
+            console.log(response.data)
+            if (response.data.length > 0) {
+              storeDataCoupons(response.data)
+              // Get offers from the API
+              navigation.navigate('allOffers')
+            }
+          })
+          .catch((err) => console.error(err));
+
         navigation.navigate('allCoupons')
       } else if (menuitem.includes("offers") || menuitem.includes("சலுகை")) {
-        navigation.navigate('allOffers')
+        if (language == 'en') {
+          var url = 'get_offers?id=1&lang=en'
+
+          // Get offers from the API
+          fetch(`${BASE_URL}${url}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          })
+            .then((response) => response.json())
+            .then((response) => {
+              console.log(response.data)
+              if (response.data.length > 0) {
+                storeDataOffers(response.data)
+                // Get offers from the API
+                navigation.navigate('allOffers')
+              }
+            })
+            .catch((err) => console.error(err));
+
+          navigation.navigate('allOffers')
+        } else {
+          var url = 'get_offers?id=1&lang=ta'
+
+          
+          // Get offers from the API
+          fetch(`${BASE_URL}${url}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          })
+            .then((response) => response.json())
+            .then((response) => {
+              console.log(response.data)
+              if (response.data.length > 0) {
+                storeDataOffers(response.data)
+                // Get offers from the API
+                navigation.navigate('allOffers')
+              }
+            })
+            .catch((err) => console.error(err));
+        }
       } else if (menuitem.includes("profile") || menuitem.includes("சுயவிவரம்")) {
         navigation.navigate('profile')
       } else if (menuitem.includes("order") || menuitem.includes("ஒர்டெர்")) {
-        navigation.navigate('orderMenu')
+        // Get All Orders
+
+        var url = null;
+        if (language == 'en') {
+          var url = `order/details?userId=${userId}&lang=en`
+        } else {
+          var url = `order/details?userId=${userId}&lang=ta`
+        }
+        
+        // Get offers from the API
+        fetch(`${BASE_URL}${url}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        })
+          .then((response) => response.json())
+          .then((response) => {
+            console.log(response.data)
+            if (response.data.length > 0) {
+              storeDataOrders(response.data)
+              // Get offers from the API
+              navigation.navigate('orderMenu')
+            }
+          })
+          .catch((err) => console.error(err));
       } else if (menuitem.includes("go back") || menuitem.includes("திரும்பி செல்")) {
         navigation.navigate('language-success');
       }
@@ -108,6 +196,28 @@ const MainScreen = ({routes, navigation}) => {
       setIsRecording(false)
     }
   }
+
+  const storeDataOrders = async (value) => {
+    try {
+      await AsyncStorage.setItem('@allorders', value);
+      console.log(value);
+    } catch (e) {}
+  }
+
+  const storeDataCoupons = async (value) => {
+    try {
+      await AsyncStorage.setItem('@allcoupons', value);
+      console.log(value);
+    } catch (e) {}
+  }
+
+  const storeDataOffers = async (value) => {
+    try {
+      // const jsonValue = JSON.stringify(value);
+      await AsyncStorage.setItem('@alloffers', value);
+      console.log(value);
+    } catch (e) {}
+  };
 
   const record = () => {
     console.log('record');
@@ -128,6 +238,7 @@ const MainScreen = ({routes, navigation}) => {
     initialRec(audioFile);
     // AudioRecord.stop();
   };
+
   const initialRec = (audioFile) => {
     uploadAudio(audioFile);
     console.log('initialRec', audioFile);
@@ -139,6 +250,7 @@ const MainScreen = ({routes, navigation}) => {
       wavFile: 'test.wav', // default 'audio.wav'
     };
   };
+  
   const uploadAudio = async (fileUrl) => {
     console.log('upload');
     console.log('🧑‍🚀🧑‍🚀', fileUrl);
@@ -228,9 +340,10 @@ const MainScreen = ({routes, navigation}) => {
       const jsonValue = JSON.stringify(value);
       await AsyncStorage.setItem('@offer_search', jsonValue);
       console.log(jsonValue);
-      navigation.navigate('list-offer-success');
+      navigation.navigate('allOffers');
     } catch (e) {}
   };
+
   return (
     <LoadingActionContainer fixed>
       <Container

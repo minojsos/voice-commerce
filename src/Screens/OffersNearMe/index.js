@@ -36,12 +36,14 @@ const MainScreen = ({routes, route, navigation}) => {
   } = useContext(LocalizationContext);
 
   useEffect(() => {
-    createData()
+    // Load Data from Async Storage
+    Tts.speak(translations['allOffersTts'])
+
+    getData()
+
     Voice.onSpeechStart = onSpeechStart()
     Voice.onSpeechRecognized = onSpeechRecognized()
     Voice.onSpeechResults = onSpeechResults()
-
-    Tts.speak(translations['allOffersTts'])
 
     const _toggleDrawer = () => {
       navigation.toggleDrawer();
@@ -106,40 +108,30 @@ const MainScreen = ({routes, route, navigation}) => {
 
   const getData = async () => {
     try {
-      const jsonValue = await AsyncStorage.getItem('@offer_search');
-      const searchData = JSON.parse(jsonValue);
-      setListData(searchData);
-      Tts.speak(searchData.msg, {
-        androidParams: {
-          KEY_PARAM_PAN: -1,
-          KEY_PARAM_VOLUME: 0.5,
-          KEY_PARAM_STREAM: 'STREAM_MUSIC',
-        },
-      });
-      Tts.speak(searchData.listOffers[0].item_name, {
-        androidParams: {
-          KEY_PARAM_PAN: -1,
-          KEY_PARAM_VOLUME: 0.5,
-          KEY_PARAM_STREAM: 'STREAM_MUSIC',
-        },
-      });
-      Tts.speak('price', {
-        androidParams: {
-          KEY_PARAM_PAN: -1,
-          KEY_PARAM_VOLUME: 0.5,
-          KEY_PARAM_STREAM: 'STREAM_MUSIC',
-        },
-      });
-      const myNumber = searchData.listOffers[0].item_offer_price;
-      var myString = myNumber.toString();
+      const offers = await AsyncStorage.getItem('@alloffers');
 
-      Tts.speak(myString, {
-        androidParams: {
-          KEY_PARAM_PAN: -1,
-          KEY_PARAM_VOLUME: 0.5,
-          KEY_PARAM_STREAM: 'STREAM_MUSIC',
-        },
-      });
+      var allOffers=[]
+      var count=0;
+
+      for (var i=0; i < offers.length; i++) {
+        for (var j=0; j < offers[i].item.length; j++) {
+          allOffers.push({"item_id": count, "shop_name": offers[i].shop.shopObj.shop_name, "shop_address": offers[i].shop.shopObj.shop_address, "item_name": offers[i].item[j].name, "item_price": offers[i].item[j].price, "item_offer_price": offers[i].item[j].item_offer_price})
+        }
+      }
+
+      setOffersList(allOffers)
+
+      // Read offers to the user
+      for (var i=0; i < allOffers.length; i++) {
+        Tts.speak(translations.formatString(translations['offerReadTts'], {shop_name: allOffers[i].shop_name, shop_address: allOffers[i].shop_address, item_name: allOffers[i].item_name, item_price: allOffers[i].item_price, item_offer_price: allOffers[i].item_offer_price},
+        {
+          androidParams: {
+            KEY_PARAM_PAN: -1,
+            KEY_PARAM_VOLUME: 0.5,
+            KEY_PARAM_STREAM: 'STREAM_MUSIC',
+          }
+        }));
+      }
     } catch (e) {
       console.log('ee');
       // error reading value

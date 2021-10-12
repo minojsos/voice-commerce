@@ -30,6 +30,7 @@ const MainScreen = ({routes, navigation}) => {
   const [languageTts, setLanguageTts] = useState('en-IN');
   const [locale, setLocale] = useState('en_us');
   const [isRecording, setIsRecording] = useState(false);
+  const [pendingOrdersList, setPendingOrdersList] = useState([])
 
   const LISTEN_COMMAND_EN = "begin"
   const LISTEN_COMMAND_TA = "தொடங்க"
@@ -37,8 +38,6 @@ const MainScreen = ({routes, navigation}) => {
   const {
     translations
   } = useContext(LocalizationContext);
-  
-  const [pendingOrdersList, setPendingOrdersList] = useState([])
 
   const createData = () => {
     var orders = []
@@ -54,8 +53,25 @@ const MainScreen = ({routes, navigation}) => {
     setPendingOrdersList(orders)
   }
 
+  const getData = async () => {
+    try {
+      var allOrders=[]
+      const orders = await AsyncStorage.getItem('@allorders');
+
+      for (var i=0; i<orders.length; i++) {
+        if (orders[i].order_status == 0) {
+          allOrders.push({"order_id": orders[i].order_id, "shop_id": orders[i].shop_id, "shop_name": orders[i].shop_name, "coupon_id": orders[i].coupon_id, "coupon_code": orders[i].coupon_code, "coupon_value": orders[i].coupon_value, "order_status": orders[i].order_status, "order_payment": orders[i].order_payment, "items": orders[i].items})
+        }
+      }
+
+      setPendingOrdersList(allOrders)
+    } catch (e) {
+      console.log('ee');
+    }
+  }
+
   useEffect(() => {
-    createData()
+    getData()
     Voice.onSpeechStart = onSpeechStart()
     Voice.onSpeechRecognized = onSpeechRecognized()
     Voice.onSpeechResults = onSpeechResults()
@@ -136,9 +152,13 @@ const MainScreen = ({routes, navigation}) => {
           if (!isNaN(list[i])) {
             // Is a Number
             console.log("Order Number: "+list[i])
-          } else {
-            // Try to convert to Number
-            console.log("Order Number: "+list[i])
+            for (var i=0; i < pendingOrdersList.length; i++) {
+              if (pendingOrdersList[i].order_id == list[i]) {
+                // matching order
+
+                navigation.navigate('orderCancelled', pendingOrdersList[i])
+              }
+            }
           }
         }
       } else if (menuitem.includes("ஒர்டெர்")) {
@@ -147,9 +167,13 @@ const MainScreen = ({routes, navigation}) => {
           if (!isNaN(list[i])) {
             // Is a Number
             console.log("Order Number: "+list[i])
-          } else {
-            // Try to Convert to Number
-            console.log("Order Number: "+list[i])
+            for (var i=0; i < pendingOrdersList.length; i++) {
+              if (pendingOrdersList[i].order_id == list[i]) {
+                // matching order
+
+                navigation.navigate('orderCancelled', pendingOrdersList[i])
+              }
+            }
           }
         }
       }

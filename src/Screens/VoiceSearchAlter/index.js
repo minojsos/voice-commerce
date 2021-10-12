@@ -120,16 +120,6 @@ const MainScreen = ({routes, route, navigation}) => {
     }
   }
 
-  useEffect(() => {
-    if (language == 'ta') {
-      setLanguageTts('ta-IN')
-    } else {
-      setLanguageTts('en-IN')
-    }
-
-    AsyncStorage.setItem('language', language);
-  }, [language]);
-
   const record = () => {
     Tts.speak(translations['startingRecordingTts'])
     AudioRecord.start();
@@ -238,8 +228,6 @@ const MainScreen = ({routes, route, navigation}) => {
 
         <ScrollView style={{height: '75%'}}>
           {allItems ? allItems.map((item) => {
-            console.log("item.item_id")
-            console.log(item)
           return (
           <Card style={{marginTop: 10}} key={item._id}>
             <Card.Content>

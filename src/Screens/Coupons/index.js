@@ -36,7 +36,8 @@ const MainScreen = ({routes, route, navigation}) => {
   } = useContext(LocalizationContext);
 
   useEffect(() => {
-    createData()
+    getData()
+
     Voice.onSpeechStart = onSpeechStart()
     Voice.onSpeechRecognized = onSpeechRecognized()
     Voice.onSpeechResults = onSpeechResults()
@@ -90,63 +91,60 @@ const MainScreen = ({routes, route, navigation}) => {
       } else if (menuitem.includes("coupon")) {
         var coupon_code = menuitem.split("coupon")
         if (coupon_code.length > 1 && coupon_code[1] != "") {
-          console.log("Coupon Code: "+coupon_code[1])
+          for (var i=0; i < couponsList.length; i++) {
+            if (couponsList[i].coupon_id == coupon_code[1] || couponsList[i].coupon_code == coupon_code[1]) {
+              storeCoupon(couponsList[i])
+              console.log("Coupon Code: "+coupon_code[1])
+            }
+          }
         }
       } else if (menuitem.includes("கூப்பன்")) {
         var coupon_code = menuitem.split("கூப்பன்")
         if (coupon_code.length > 1 && coupon_code[1] != "") {
-          console.log("Coupon Code: "+coupon_code[1])
+          for (var i=0; i < couponsList.length; i++) {
+            if (couponsList[i].coupon_id == coupon_code[1] || couponsList[i].coupon_code == coupon_code[1]) {
+              storeCoupon(couponsList[i])
+              console.log("Coupon Code: "+coupon_code[1])
+            }
+          }
         }
       }
       setIsRecording(false)
     }
   }
 
-  const createData = () => {
-    var coupons = []
-    for (var i = 0; i < 10; i++) {
-      coupons.push({"code":"CV100", "value":100, "available":1})
+  const storeCoupon = async (value) => {
+    var existing = await AsyncStorage.getItem('@selectedcoupon')
+    if (existing == null) {
+      // Make sure Seleccted Coupon is not existing already
+      Tts.speak(translations.formatString(translations['couponAddedTts'], {coupon_code: value.coupon_id}))
+      await AsyncStorage.setItem('@selectedcoupon', value)
+    } else {
+      Tts.speak(translations.formatString(translations['couponReplacedTts'], {coupon_code1: existing.coupon_id, coupon_code2: value.coupon_id}))
     }
-
-    setCouponsList(coupons);
   }
 
   const getData = async () => {
     try {
-      const jsonValue = await AsyncStorage.getItem('@offer_search');
-      const searchData = JSON.parse(jsonValue);
-      setListData(searchData);
-      Tts.speak(searchData.msg, {
-        androidParams: {
-          KEY_PARAM_PAN: -1,
-          KEY_PARAM_VOLUME: 0.5,
-          KEY_PARAM_STREAM: 'STREAM_MUSIC',
-        },
-      });
-      Tts.speak(searchData.listOffers[0].item_name, {
-        androidParams: {
-          KEY_PARAM_PAN: -1,
-          KEY_PARAM_VOLUME: 0.5,
-          KEY_PARAM_STREAM: 'STREAM_MUSIC',
-        },
-      });
-      Tts.speak('price', {
-        androidParams: {
-          KEY_PARAM_PAN: -1,
-          KEY_PARAM_VOLUME: 0.5,
-          KEY_PARAM_STREAM: 'STREAM_MUSIC',
-        },
-      });
-      const myNumber = searchData.listOffers[0].item_offer_price;
-      var myString = myNumber.toString();
+      const coupons = await AsyncStorage.getItem('@allcoupons');
 
-      Tts.speak(myString, {
-        androidParams: {
-          KEY_PARAM_PAN: -1,
-          KEY_PARAM_VOLUME: 0.5,
-          KEY_PARAM_STREAM: 'STREAM_MUSIC',
-        },
-      });
+      var allcoupons = []
+      
+      for (var i=0; i < coupons.length; i++) {
+        allcoupons.push({"coupon_id": coupons[i]._id, "code": coupons[i]._id, "value": coupons[i].coupon_value})
+
+        // Read Coupons
+        Tts.speak(translations.formatString(translations['couponDetailText'], {coupon_code: coupons[i]._id, currency: translations['currencyLabel'], coupon_value: coupons[i].coupon_value}), 
+        {
+          androidParams: {
+            KEY_PARAM_PAN: -1,
+            KEY_PARAM_VOLUME: 0.5,
+            KEY_PARAM_STREAM: 'STREAM_MUSIC',
+          },
+        });
+      }
+
+      setCouponsList(allcoupons)
     } catch (e) {
       console.log('ee');
       // error reading value

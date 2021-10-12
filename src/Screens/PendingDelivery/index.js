@@ -23,7 +23,7 @@ const MainScreen = ({routes, route, navigation}) => {
   // eslint-disable-next-line prettier/prettier
   const {response} = route.params;
   const [resList, setListData] = useState('');
-  const [order, setOrder] = useState(null);
+  const [order, setOrder] = useState(route.params);
   const [total, setTotal] = useState(0);
   
   const LISTEN_COMMAND_EN = "begin"
@@ -32,7 +32,6 @@ const MainScreen = ({routes, route, navigation}) => {
   const { translations } = useContext(LocalizationContext)
   
   useEffect(() => {
-    createData()
     Voice.onSpeechStart = onSpeechStart()
     Voice.onSpeechRecognized = onSpeechRecognized()
     Voice.onSpeechResults = onSpeechResults()

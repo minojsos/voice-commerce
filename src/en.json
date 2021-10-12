@@ -194,6 +194,8 @@
   "shopDetailHint": "This Order was placed from the Shop {shop_name}",
   "couponDetailText": "Coupon {coupon_code} with value {currency}.{coupon_value}",
   "couponDetailHint": "This Order was placed with Coupon {coupon_code} of Value {currency}.{coupon_value}",
+  "couponAddedTts": "Coupon {coupon_code} added",
+  "couponReplacedTts": "Coupon {coupon_code1} replaced with {coupon_code2}",
   "orderItemDetailText": "{length} Items in Order",
   "orderItemDetailHint": "You have {length} items in your Order #{order_id} placed from the Shop {shop_name}",
   "orderStatusLabel": "Order Status",
@@ -214,5 +216,6 @@
   "cashOnDeliveryLabel": "Cash On Delivery",
   "successReceived": "Successfully Marked Order as Received",
   "successCancelled": "Successfully Cancelled Order",
-  "successReturned": "Successfully Returned Order"
+  "successReturned": "Successfully Returned Order",
+  "offerReadTts": "Shop {shop_name} located at {shop_address} has {item_name} sold usually at {item_price} is selling it for {item_offer_price}"
 }
