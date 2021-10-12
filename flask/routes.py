@@ -2610,6 +2610,8 @@ def get_orderDetailsbyId():
         order = json.loads(Order.objects(user_id=userId).to_json())
         orderItems = json.loads(OrderItem.objects().to_json())
         itemList = json.loads(Item.objects().to_json())
+        shopList = json.loads(Shop.objects().to_json())
+        couponList = json.loads(Coupon.objects().to_json())
         orders =[]
         # print(orderItems)
         translator = Translator()
@@ -2620,7 +2622,8 @@ def get_orderDetailsbyId():
                     y['item_name'] = translator.translate(y['item_name'], dest=lang).text
                     item.append(y)
             obj = {
-                "orderId": x['_id'], "shopId": x['shop_id'], "items": item
+                "orderId": x['_id'], "shopId": x['shop_id'], "shopName": [y for y in shopList if y['_id'] ==  x['shop_id']][0].get("shop_name"), "status": x["order_status"], 
+                "payment": x["order_payment"], "couponId": x["coupon_id"], "items": item
             }
             orders.append(obj)
         return jsonify({"result":True,"msg":log_success_retrieved_category, "data": orders})
