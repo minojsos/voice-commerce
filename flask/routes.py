@@ -2359,15 +2359,11 @@ def store_orderList():
             for item in list:
                 item_name = translator.translate(item['item_name']).text
                 item['item_name'] = item_name.lower()
-            print(list)
 
         itemList = json.loads(Item.objects().to_json())
-        print(itemList)
         array = []
         for i in list:
-            print( i['item_name'], "i")
             for x in itemList:
-                print(x['item_name'])
                 if i['item_name'] == x['item_name']:
                     obj = {
                         "item_code": x['item_code'],
@@ -2377,10 +2373,9 @@ def store_orderList():
                     }
                     array.append(obj)
 
-        print(array)
         storeList = StoreList( user_id=user_id, items=array )
-        storeList.save()
-        return jsonify({"result": True, "msg":"list stored for future"})
+        obj = storeList.save()
+        return jsonify({"result": True, "msg":"list stored for future", "data":getattr(obj, "id"), "obj": obj })
     except Exception as e:
         return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
 
@@ -2767,13 +2762,40 @@ def get_shops():
 
 """
 ------
-Coupouns
+Checkout
 ------
 """
 
 @app.route('/checkout-final',methods=['POST'])
 def checkout():
-    return "true"
+    try:
+        data = request.get_json()
+        items = data[0].get('items')   
+        total = 0
+        storeList = json.loads(UserCoupon.objects(user_id=data[0].get('user_id')).to_json())
+        for x in items:
+            item = Item.objects(item_id=x['id']).to_json()
+            total = x['item_offer_price'] * x['quan']
+            if [y for y in storeList if y['coupon_id'] == data[0].get('coupon_id')]:
+                total = total - data[0].get('couponValue')
+            item.item_stock = item.item_stock - x['quan']
+            item.save()
+
+        order = Order( shop_id=data[0].get('shop_id'), user_id=data[0].get('user_id'), coupon_id=data[0].get('coupon_id'), coupon_value=data[0].get('coupon_value'), 
+                        order_status=0, order_payment=total, address=data[0].get('address'))
+        obj = order.save()
+        userCoupon = UserCoupon(user_id=data[0].get('user_id'), coupon_value=data[0].get('coupon_value'), coupon_available=1)
+        userCoupon.save()
+        for z in items:
+            orderItem = OrderItem(order_id=getattr(obj, "id"),item_id=z['id'],item_name=z['name'],item_code=z['item_code'],item_rate=z['item_rate'],
+                                    item_offer_price=z['item_offer_price'],item_qty=z['quan'])
+            orderItem.save()
+
+        return jsonify({"result":True,"msg":"sucess","data":data[0].get('items')})
+    except Exception as e:
+        return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
+
+
 
 
 """
