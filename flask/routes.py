@@ -2618,7 +2618,7 @@ def get_orderDetailsbyId():
                     item.append(y)
             obj = {
                 "orderId": x['_id'], "shopId": x['shop_id'], "shopName": [y for y in shopList if y['_id'] ==  x['shop_id']][0].get("shop_name"), "status": x["order_status"], 
-                "payment": x["order_payment"], "couponId": x["coupon_id"], "items": item
+                "payment": x["order_payment"], "couponId": x["coupon_id"], "couponvalue": x["coupon_value"], "items": item
             }
             orders.append(obj)
         return jsonify({"result":True,"msg":log_success_retrieved_category, "data": orders})
@@ -2634,17 +2634,18 @@ Coupouns
 @app.route('/get_coupons', methods=['GET'])
 def get_coupons():
     try:
-        data = request.get_json()
-        id = data.get('id', '')
+        # data = request.get_json()
+        # id = data.get('id', '')
         coupons = json.loads(Coupon.objects().to_json())
-        userCoupons = json.loads(UserCoupon.objects(user_id=id).to_json())
+        # print(coupons)
+        # userCoupons = json.loads(UserCoupon.objects(user_id=id).to_json())
         otherCoupons = []
-        for x in coupons:
-            for y in userCoupons:
-                if x['id'] != y['coupon_id']:
-                    otherCoupons.append(x)
+        # for x in coupons:
+        #     for y in userCoupons:
+        #         if x['id'] != y['coupon_id']:
+        #             otherCoupons.append(x)
 
-        return jsonify({"result":True,"msg":log_success_retrieved_category,"data": otherCoupons})
+        return jsonify({"result":True,"msg":log_success_retrieved_category,"data": coupons})
     except Exception as e:
         return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
 
@@ -2794,6 +2795,22 @@ def checkout():
         return jsonify({"result":True,"msg":"sucess","data":data[0].get('items')})
     except Exception as e:
         return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
+
+"""
+------
+Get User Profile
+------
+"""
+
+@app.route('/get_profile', methods=['GET'])
+def get_profile():
+    try:
+        userId= request.args.get('id')
+        user = json.loads(User.objects(user_id=userId).to_json())
+        return jsonify({"result":True,"msg":log_success_retrieved_category,"data": user})
+    except Exception as e:
+        return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
+
 
 
 
