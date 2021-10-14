@@ -10,7 +10,7 @@ class OrderItem(db.Document):
     """Data model for Caet orders."""
     id = db.SequenceField(primary_key=True, required=True)
     order_id = db.IntField(required=True)
-    item_id = db.IntField(required=True)
+    item_id = db.IntField(required=False)
     item_name = db.StringField(required=True)
     item_code = db.StringField(required=True)
     item_rate = db.DecimalField(required=True)

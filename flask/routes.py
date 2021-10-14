@@ -1383,7 +1383,7 @@ def voicesearch_en():
                 # wavfile.write(wav_path, fs, y)
                 # sf.read('msg0000 (2).WAV') 
                 print(audio_data)
-                line = recognizer.recognize_google(audio_data, language="en-US")
+                line = recognizer.recognize_google(audio_data, language="en-GB")
                 line = line.lower()
                 print(line)
             except Exception as e:
@@ -1392,19 +1392,37 @@ def voicesearch_en():
             # translator = Translator()
             # text = translator.translate(line, dest="en").text
             item_det = line.split()
-            item_name = item_det[0] 
-            item_qty = item_det[1] 
-            item_unit = item_det[2]
-            item_cmd = item_det[3]
-            # Banana 5 KG Delete
-            if item_cmd == "add":
-                return jsonify({"result":[{"name": item_name, "qty": item_qty, "unit": item_unit, "action": 1}],"msg":"sucess"})
+            print(item_det)
+            if len(item_det) == 4:
+                item_name = item_det[0] 
+                item_qty = item_det[1] 
+                item_unit = item_det[2]
+                item_cmd = item_det[3]
+                if item_cmd == "add" or item_cmd == "ad" or item_cmd == "addd" or item_cmd == "and":
+                    return jsonify({"result":[{"name": item_name, "qty": item_qty, "unit": item_unit, "action": 1}],"msg":"sucess"})
 
-            if item_cmd == "delete":
-                return jsonify({"result":[{"name": item_name, "qty": item_qty, "unit": item_unit, "action": 0}],"msg":"sucess"})
+                if item_cmd == "delete":
+                    return jsonify({"result":[{"name": item_name, "qty": item_qty, "unit": item_unit, "action": 0}],"msg":"sucess"})
             
-            if item_cmd == "edit":
-                return jsonify({"result":[{"name": item_name, "qty": item_qty, "unit": item_unit, "action": 2}],"msg":"sucess"})
+                if item_cmd == "edit":
+                    return jsonify({"result":[{"name": item_name, "qty": item_qty, "unit": item_unit, "action": 2}],"msg":"sucess"})
+            else:
+                if len(item_det) == 3:
+                    item_name = item_det[0] 
+                    item_qty = item_det[1] 
+                    item_cmd = item_det[2]
+                    # item_cmd = item_det[3]
+                    # Banana 5 KG Delete
+                    if item_cmd == "add" or item_cmd == "ad" or item_cmd == "addd" or item_cmd == "and":
+                        return jsonify({"result":[{"name": item_name, "qty": item_qty, "action": 1}],"msg":"sucess"})
+
+                    if item_cmd == "delete":
+                        return jsonify({"result":[{"name": item_name, "qty": item_qty, "action": 0}],"msg":"sucess"})
+            
+                    if item_cmd == "edit":
+                        return jsonify({"result":[{"name": item_name, "qty": item_qty, "action": 2}],"msg":"sucess"})
+                else:
+                    return jsonify({"result":False,"msg":"Wrong Action","flag":"Wrong Action"})
             return jsonify({"result":item_det,"msg":"Wrong Action","flag":"Wrong Action"})
         else:
             return jsonify({"result":False,"msg":log_no_audio,"flag":"file-error"})
@@ -2415,11 +2433,12 @@ Predit item availability
 def predict_availability():
     try:
         data = request.get_json()
-        print(data[1].get('items'))
-        item_ids =data[1].get('items')
-        lang = data[0].get('lang')
+        print(data)
+        item_ids =data.get('items')
+        lang = data.get('lang')
         shopList = json.loads(Shop.objects().to_json())
         itemList = json.loads(Item.objects().to_json())
+        print(itemList)
         shopArray = []
         for x in shopList:
             items = []
@@ -2434,9 +2453,9 @@ def predict_availability():
                         "item_offer_price": y["item_offer_price"],
                         "item_unit": y["item_unit"],
                         "available": False,
-                        "category_id": y["category_id"]
-                        # "pharmaceutical": y["pharmaceutical"],
-                        # "prescription": y["prescription"]
+                        "category_id": y["category_id"],
+                        "pharmaceutical": y["pharmaceutical"],
+                        "prescription": y["prescription"]
                     }
                     items.append(it)
             obj = {
@@ -2451,35 +2470,51 @@ def predict_availability():
             itemNo = 0
             item = []
             # for z in a['items']:
+            lk = a
             for b in item_ids:
-                if [x for x in a['items'] if x['item_name'] == b['name']] and [x for x in a['items'] if b['quan'] <= x['item_stock']]:
+                if [x for x in a['items'] if x['item_name'] == b['name']] and [x for x in a['items'] if int(float(b['quan'])) <= x['item_stock']]:
                     itemNo = itemNo + 1
                     # z['available'] = True
                     # z['item_name'] = translator.translate(b['name'], dest=lang).text
-                    print([x for x in a['items'] if x['item_name'] == b['name']])
                     obj ={  "name": translator.translate(b['name'], dest=lang).text, 
                             "quan": b['quan'],  
                             "available": True,
                             "item_price": [x for x in a['items'] if x['item_name'] == b['name']][0].get('item_price'),
-                            "item_offer_price": [x for x in a['items'] if x['item_name'] == b['name']][0].get('item_offer_price')
+                            "item_offer_price": [x for x in a['items'] if x['item_name'] == b['name']][0].get('item_offer_price'),
+                            "pharmaceutical": [x for x in a['items'] if x['item_name'] == b['name']][0].get('pharmaceutical'),
+                            "prescription": [x for x in a['items'] if x['item_name'] == b['name']][0].get('prescription'),
                         }
                     item.append(obj)    
                 else:
                     if [x for x in itemList if x['item_name'] == b['name']]:
                         categoryId = [x for x in itemList if x['item_name'] == b['name']][0].get('category_id')
-                        print(categoryId)
-                        nlist = [x for x in a['items'] if x['category_id'] == categoryId]
-                        obj ={"name": translator.translate(b['name'], dest=lang).text,  "available": False, "similar-items": nlist}
+                        my_list = []
+                        # dictList = my_list.items()
+                        # for shop in shopArray:
+                        # print(lk, "print")
+                        for items in lk['items']:
+                            if items['category_id'] == categoryId:
+                                    obj = {
+                                        'item_name': items['item_name'],
+                                        'item_price': items['item_price'],
+                                        "item_offer_price": items['item_offer_price'],
+                                        "pharmaceutical": items['pharmaceutical'],
+                                        "prescription": items['prescription'],
+                                        "category_id": items["category_id"]
+                                    }
+                                    my_list.append(obj)
+                        obj ={"name": translator.translate(b['name'], dest=lang).text, "quan": b['quan'],  "available": False}
                         item.append(obj)
                     else:
-                        obj ={"name": translator.translate(b['name'], dest=lang).text, "available": False, "similar-items": nlist}
+                        obj ={"name": translator.translate(b['name'], dest=lang).text, "quan": b['quan'],  "available": False}
                         item.append(obj)
             # [x for x in myList if x.n == 30]
             prob = (itemNo/len(item_ids)) * 100
             objs = {
                 'shopObj': a,
                 'perc': prob,
-                'items': item
+                'items': item,
+                'similar_items': my_list
             }
             shopItems.append(objs)   
 
@@ -2771,28 +2806,32 @@ Checkout
 def checkout():
     try:
         data = request.get_json()
-        items = data[0].get('items')   
+        items = data[0].get('items') 
+        # print(items, "item")  
         total = 0
         storeList = json.loads(UserCoupon.objects(user_id=data[0].get('user_id')).to_json())
         for x in items:
-            item = Item.objects(item_id=x['id']).to_json()
-            total = x['item_offer_price'] * x['quan']
+            item = Item.objects(item_name=x['name']).to_json()
+            itemArray = json.loads(Item.objects(item_name=x['name']).to_json())
+            print(itemArray, "item")
+            total = int(float(x['item_offer_price'])) * int(float(x['quan']))
             if [y for y in storeList if y['coupon_id'] == data[0].get('coupon_id')]:
                 total = total - data[0].get('couponValue')
-            item.item_stock = item.item_stock - x['quan']
-            item.save()
+            item_stockk = int(float(itemArray[0].get('item_stock'))) - int(float(x['quan']))
+            item = Item()
+            item.update(item_stock = item_stockk)
 
         order = Order( shop_id=data[0].get('shop_id'), user_id=data[0].get('user_id'), coupon_id=data[0].get('coupon_id'), coupon_value=data[0].get('coupon_value'), 
                         order_status=0, order_payment=total, address=data[0].get('address'))
         obj = order.save()
-        userCoupon = UserCoupon(user_id=data[0].get('user_id'), coupon_value=data[0].get('coupon_value'), coupon_available=1)
+        userCoupon = UserCoupon(user_id=data[0].get('user_id'), coupon_value=data[0].get('coupon_value'), coupon_available=1,coupon_id=data[0].get('coupon_id'))
         userCoupon.save()
         for z in items:
-            orderItem = OrderItem(order_id=getattr(obj, "id"),item_id=z['id'],item_name=z['name'],item_code=z['item_code'],item_rate=z['item_rate'],
+            orderItem = OrderItem(order_id=getattr(obj, "id"),item_name=z['name'],item_code=z['item_code'],item_rate=z['item_rate'],
                                     item_offer_price=z['item_offer_price'],item_qty=z['quan'])
             orderItem.save()
 
-        return jsonify({"result":True,"msg":"sucess","data":data[0].get('items')})
+        return jsonify({"result":True,"msg":"sucess","data":obj})
     except Exception as e:
         return jsonify({"result":False,"msg":"Error \n %s" % (e),"data":None})
 
