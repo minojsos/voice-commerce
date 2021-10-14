@@ -2827,7 +2827,7 @@ def checkout():
         userCoupon = UserCoupon(user_id=data[0].get('user_id'), coupon_value=data[0].get('coupon_value'), coupon_available=1,coupon_id=data[0].get('coupon_id'))
         userCoupon.save()
         for z in items:
-            orderItem = OrderItem(order_id=getattr(obj, "id"),item_name=z['name'],item_code=z['item_code'],item_rate=z['item_rate'],
+            orderItem = OrderItem(order_id=getattr(obj, "id"),item_name=z['name'],item_code="",item_rate=z['item_rate'],
                                     item_offer_price=z['item_offer_price'],item_qty=z['quan'])
             orderItem.save()
 
